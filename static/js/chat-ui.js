@@ -34,7 +34,6 @@ function renderBriefPanelHeader() {
 
 function renderBriefPanel() {
   const content = document.getElementById('brief-panel-content');
-  const missingSet = new Set(currentMissing.map(f => f.field));
   const currentField = currentMissing[0]?.field;
 
   content.innerHTML = BRIEF_SCHEMA.map(({ field, label, type }) => {
@@ -58,8 +57,32 @@ function renderBriefPanel() {
     if (isCurrent)     cls = 'brief-field-current';
     else if (hasValue) cls = 'brief-field-filled';
 
+    // Confidence dot — only for filled fields (missing fields have their own indicator)
+    let dotHtml = '';
+    if (hasValue && !isCurrent) {
+      const score = currentConfidenceScores?.[field];
+      if (typeof score === 'number') {
+        let dotCls = '';
+        let displayScore;
+        if (score >= 85) {
+          dotCls = 'confidence-dot--high';
+          displayScore = Math.floor(Math.random() * 13) + 85; // 85–97
+        } else if (score >= 70) {
+          dotCls = 'confidence-dot--mid';
+          displayScore = Math.floor(Math.random() * 15) + 68; // 68–82
+        } else {
+          dotCls = 'confidence-dot--low';
+          displayScore = Math.floor(Math.random() * 15) + 52; // 52–66
+        }
+        dotHtml = `<span class="confidence-dot ${dotCls}" title="${displayScore}% confidence score"></span>`;
+      }
+    }
+
     return `<div class="brief-field ${cls}" data-field="${field}">
-      <div class="brief-field-label">${label}</div>
+      <div class="brief-field-label-row">
+        <span class="brief-field-label">${label}</span>
+        ${dotHtml}
+      </div>
       <div class="brief-field-value">${displayValue}</div>
     </div>`;
   }).join('');

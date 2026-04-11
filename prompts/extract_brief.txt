@@ -52,6 +52,21 @@ Dodatkowe reguły interpretacyjne:
 - client_expectations ma opisywać „jakie są oczekiwania, wymagania, warunki lub preferencje klienta”.
 - Jeśli ten sam fragment pasuje do kilku pól, wybierz pole najbardziej precyzyjne i nie duplikuj tej samej treści bez potrzeby.
 
+Dodatkowe wymaganie — confidence_scores:
+Po ekstrakcji wszystkich pól zwróć także obiekt "confidence_scores" z oceną pewności dla każdego pola (liczba całkowita 0–100).
+
+Zasady oceniania — stosuj je rygorystycznie, pola MUSZĄ różnić się między sobą:
+- 90–100: wartość jest dosłownie zacytowana z tekstu wejściowego, bez żadnej interpretacji. Tylko ten zakres.
+- 70–89: informacja jest jednoznacznie wyrażona, ale wymagała drobnego parafrazowania lub zebrania z kilku zdań.
+- 50–69: informacja jest możliwa do wywnioskowania z kontekstu, ale nie jest wprost napisana.
+- 0–49: informacja jest nieobecna, zbyt ogólna lub wymaga domysłu — pole powinno być "" lub [].
+
+Ważne reguły:
+1. Oceny NIE mogą być jednakowe dla wszystkich pól. Typowy brief ma zróżnicowane oceny.
+2. Ocena 90+ jest wyjątkiem, nie regułą — zarezerwowana wyłącznie dla dosłownych cytatów.
+3. Pola zwrócone jako "" lub [] MUSZĄ mieć ocenę 0.
+4. Przed przypisaniem oceny zadaj sobie pytanie: "Czy mógłbym wskazać konkretne zdanie w tekście źródłowym?" Jeśli nie — ocena ≤ 69.
+
 Wzorzec wyjścia:
 {
   "campaign_goal": "",
@@ -63,7 +78,19 @@ Wzorzec wyjścia:
   "kpis": [],
   "success_measurement": "",
   "scope_of_work": "",
-  "client_expectations": ""
+  "client_expectations": "",
+  "confidence_scores": {
+    "campaign_goal": 0,
+    "product_or_service": 0,
+    "target_audience": 0,
+    "key_messages": 0,
+    "marketing_channels": 0,
+    "tone_of_voice": 0,
+    "kpis": 0,
+    "success_measurement": 0,
+    "scope_of_work": 0,
+    "client_expectations": 0
+  }
 }
 
 Tekst wejściowy:
