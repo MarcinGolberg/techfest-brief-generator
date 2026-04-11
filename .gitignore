@@ -3,6 +3,8 @@
 .venv
 .venv/
 
+.env
+
 __pycache__/*
 *.pyc
 .DS_Store
@@ -12,3 +14,6 @@ uploads/*
 generated/*
 
 tests/*
+services/*
+.idea
+.idea/

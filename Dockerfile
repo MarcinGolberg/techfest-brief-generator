@@ -1,18 +1,32 @@
-# Use a lightweight Python image
-FROM python:3.11
+FROM python:3.11-slim
 
-# Set the working directory
+# 2. Fix OS Vulnerabilities (Fixes OpenSSL, OpenSSH, libtiff, etc.)
+# This runs the updates Trivy flagged as "fixed in version X"
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    # Add any system-level dependencies your app needs here
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# 3. Set a secure working directory
 WORKDIR /app
 
-# Copy and install dependencies
+# 4. Patch Python Tools (Fixes wheel and jaraco.context issues)
+# We upgrade pip/wheel/setuptools before installing requirements
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools jaraco.context
+
+# 5. Install application dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# 6. Copy application code
 COPY . .
 
-# Expose the port Flask runs on (default 5000)
-EXPOSE 5000
+# 7. Security Hardening: Run as a non-root user
+# This is a core "Hardening" requirement in your challenge
+RUN useradd -m team4user
+USER team4user
 
-# Run the application using Gunicorn (recommended for production)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# 8. Expose and Start
+EXPOSE 8080
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "600", "app:app"]
