@@ -1544,27 +1544,45 @@
     function showComplete() {
       document.getElementById('chat-input-bar').style.display = 'none';
       const msgs = document.getElementById('chat-messages');
+
       const card = document.createElement('div');
       card.className = 'brief-complete-card';
       card.innerHTML = `
         <h3>Brief kompletny ✓</h3>
         <p>Przekazuję pełny zestaw danych (brief + sources + combined_text) do kolejnego etapu.</p>
-        <div id="final-status" style="margin:10px 0; color:#555;">Trwa generowanie dokumentu…</div>
-        <div id="final-actions" style="display:none; gap:8px;">
-          <a id="final-download" class="btn btn-primary" href="#" download> Pobierz plik &gt; </a>
+
+        <select id="final-format" class="manual-field" style="margin:10px 0;">
+          <option value="docx">DOCX</option>
+          <option value="pdf">PDF</option>
+        </select>
+
+        <div id="final-status" style="margin:10px 0; color:#555;">Wybierz format i kliknij generowanie.</div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="finalizeBrief()">Generuj plik &gt;</button>
           <button class="btn btn-ghost" onclick="closeChatOverlay()">Wróć</button>
         </div>
+
+        <div id="final-actions" style="display:none; gap:8px; margin-top:12px;">
+          <a id="final-download" class="btn btn-primary" href="#" download>Pobierz plik &gt;</a>
+        </div>
       `;
+
       msgs.appendChild(card);
       msgs.scrollTop = msgs.scrollHeight;
-
-      finalizeBrief();
     }
 
     async function finalizeBrief() {
-      const statusEl  = document.getElementById('final-status');
+      const statusEl = document.getElementById('final-status');
       const actionsEl = document.getElementById('final-actions');
-      const linkEl    = document.getElementById('final-download');
+      const linkEl = document.getElementById('final-download');
+      const formatEl = document.getElementById('final-format');
+
+      const selectedFormat = formatEl ? formatEl.value : 'docx';
+
+      statusEl.textContent = 'Trwa generowanie dokumentu…';
+      statusEl.style.color = '#555';
+      actionsEl.style.display = 'none';
 
       try {
         const res = await fetch('/finalize', {
@@ -1574,7 +1592,7 @@
             brief: currentBrief,
             sources: currentSources,
             combined_text: currentCombinedText,
-            format: 'docx'
+            format: selectedFormat
           })
         });
 
@@ -1587,14 +1605,14 @@
           return;
         }
 
-        statusEl.textContent = 'Dokument gotowy — możesz go pobrać lub przejść dalej.';
+        statusEl.textContent = `Dokument ${selectedFormat.toUpperCase()} gotowy — możesz go pobrać.`;
         statusEl.style.color = '#222';
 
         if (data.download_url) {
           linkEl.href = data.download_url;
+          linkEl.setAttribute('download', '');
           actionsEl.style.display = 'flex';
         }
-
       } catch (err) {
         statusEl.textContent = `Błąd połączenia: ${err.message}`;
         statusEl.style.color = '#c00';
