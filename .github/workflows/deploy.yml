@@ -32,6 +32,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         # Pipeline zatrzymuje się automatycznie jeśli wykryje sekrety (exit code != 0)
 
   # ============================================================
