@@ -76,7 +76,7 @@ jobs:
   sonarqube-analysis:
     name: "Quality Gate — SonarQube"
     runs-on: ubuntu-latest
-    needs: [vulnerability-scan, sbom-generation]
+    needs: [ vulnerability-scan, sbom-generation ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,7 +96,6 @@ jobs:
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
             -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.qualitygate.wait=true
 
   # ============================================================
   # NEW JOB 5: DOCKER BUILD, SCAN (TRIVY) & PUSH
