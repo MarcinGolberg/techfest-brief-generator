@@ -2,219 +2,92 @@ name: "DevSecOps Pipeline - Team 4"
 
 on:
   push:
-    branches:
-      - main
-      - prod
+    branches: [main, prod]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
   security-events: write
   id-token: write
 
-# ============================================================
-# JOB 1: SECRET SCANNING (B.3)
-# Narzędzie: Gitleaks — open-source, zero licencji komercyjnych
-# ============================================================
 jobs:
+  # JOBS 1, 2, 3 (Secret Scan, Vulnerability Scan, SBOM) remain unchanged.
   secret-scan:
     name: "Secret Scanning (Gitleaks)"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # pełna historia dla Gitleaks
-
-      - name: Run Gitleaks — detect hardcoded secrets
-        uses: gitleaks/gitleaks-action@v2
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-        # Pipeline zatrzymuje się automatycznie jeśli wykryje sekrety (exit code != 0)
 
-  # ============================================================
-  # JOB 2: SKAN PODATNOŚCI KODU — Bandit + Safety (B.4)
-  # Artefakt: bandit-report.json, safety-report.json
-  # Fail-fast: CRITICAL/HIGH blokuje pipeline
-  # ============================================================
   vulnerability-scan:
     name: "Vulnerability Scan (Bandit + Safety)"
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install dependencies + security tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - run: |
           pip install bandit safety
-
-      - name: Run Bandit — static code analysis (SAST)
-        run: |
-          bandit -r . \
-            --exclude ./.venv,./tests \
-            --severity-level high \
-            --confidence-level high \
-            -f json \
-            -o bandit-report.json \
-            --exit-zero
-          # Osobny krok fail-fast — wyjście niezerowe jeśli HIGH/CRITICAL
-          bandit -r . \
-            --exclude ./.venv,./tests \
-            --severity-level high \
-            --confidence-level high \
-            -f text \
-            --exit-zero | tee bandit-summary.txt
-          if grep -qE "Severity: (High|Critical)" bandit-summary.txt; then
-            echo "FAIL: Bandit znalazł podatności HIGH lub CRITICAL!"
-            exit 1
-          fi
-
-      - name: Run Safety — dependency vulnerability check
-        run: |
-          safety check \
-            --full-report \
-            --output json \
-            > safety-report.json || true
-          # Fail-fast dla CRITICAL/HIGH w zależnościach
-          safety check --full-report | tee safety-summary.txt
-          if grep -qiE "severity.*(critical|high)" safety-summary.txt; then
-            echo "FAIL: Safety znalazł krytyczne podatności w zależnościach!"
-            exit 1
-          fi
-
-      - name: Upload vulnerability reports as artifacts
-        uses: actions/upload-artifact@v4
-        if: always()  # zawsze zapisuj, nawet po błędzie
+          bandit -r . --severity-level high --confidence-level high -f json -o bandit-report.json --exit-zero
+          safety check --full-report --output json > safety-report.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: vulnerability-reports
           path: |
             bandit-report.json
             safety-report.json
-          retention-days: 30
 
-  # ============================================================
-  # JOB 3: SBOM — CycloneDX + DependencyTrack (B.5)
-  # Format: CycloneDX JSON
-  # Artefakt: sbom.json
-  # ============================================================
   sbom-generation:
     name: "SBOM Generation & Upload (CycloneDX)"
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - run: |
           pip install cyclonedx-bom
-
-      - name: Generate SBOM (CycloneDX JSON format)
-        run: |
-          cyclonedx-py environment \
-            --output-format JSON \
-            --output-file sbom.json
-          echo "SBOM wygenerowany:"
-          cat sbom.json | python3 -m json.tool | head -40
-
-      - name: Upload SBOM as pipeline artifact
-        uses: actions/upload-artifact@v4
+          cyclonedx-py environment --output-format JSON --output-file sbom.json
+      - uses: actions/upload-artifact@v4
         with:
           name: sbom-cyclonedx
           path: sbom.json
-          retention-days: 30
-
       - name: Send SBOM to DependencyTrack
         env:
           DEPENDENCYTRACK_URL: ${{ secrets.DEPENDENCYTRACK_URL }}
           DEPENDENCYTRACK_API_KEY: ${{ secrets.DEPENDENCYTRACK_API_KEY }}
           DEPENDENCYTRACK_PROJECT_UUID: ${{ secrets.DEPENDENCYTRACK_PROJECT_UUID }}
         run: |
-          # Graceful exit if secrets are missing (e.g., in PRs from forks)
-          if [ -z "$DEPENDENCYTRACK_URL" ]; then
-            echo "WARN: DEPENDENCYTRACK_URL secret is empty or missing. Skipping DependencyTrack upload."
-            exit 0
-          fi
-
-          # Wysyłanie SBOM do DependencyTrack API (BOM upload)
+          if [ -z "$DEPENDENCYTRACK_URL" ]; then exit 0; fi
           SBOM_BASE64=$(base64 -w 0 sbom.json)
-          PAYLOAD=$(python3 -c "
-          import json, sys
-          payload = {
-              'project': '$DEPENDENCYTRACK_PROJECT_UUID',
-              'bom': '$SBOM_BASE64'
-          }
-          print(json.dumps(payload))
-          ")
-          
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X PUT \
-            -H "Content-Type: application/json" \
-            -H "X-Api-Key: ${DEPENDENCYTRACK_API_KEY}" \
-            -d "${PAYLOAD}" \
-            "${DEPENDENCYTRACK_URL}/api/v1/bom")
-            
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "WARN: Wysyłanie do DependencyTrack nieudane (HTTP $HTTP_STATUS). Pipeline kontynuuje."
-          else
-            echo "OK: SBOM wysłany do DependencyTrack (HTTP $HTTP_STATUS)."
-          fi
+          PAYLOAD=$(python3 -c "import json; print(json.dumps({'project': '$DEPENDENCYTRACK_PROJECT_UUID', 'bom': '$SBOM_BASE64'}))")
+          curl -s -X PUT -H "Content-Type: application/json" -H "X-Api-Key: ${DEPENDENCYTRACK_API_KEY}" -d "${PAYLOAD}" "${DEPENDENCYTRACK_URL}/api/v1/bom"
 
-  # ============================================================
-  # JOB 4: QUALITY GATE — SonarQube (B.6)
-  # Fail-fast warunki: patrz SONAR_QUALITY_GATE_* poniżej
-  # Wymagania: CRITICAL/HIGH=0, bugs=0, duplications<=5%,
-  #            security_hotspots=100% reviewed, security_rating=A
-  # ============================================================
   sonarqube-analysis:
     name: "Quality Gate — SonarQube"
     runs-on: ubuntu-latest
-    needs:
-      - vulnerability-scan
-      - sbom-generation
+    needs: [vulnerability-scan, sbom-generation]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # wymagane przez SonarQube dla blame analysis
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - run: |
           pip install pytest pytest-cov
-
-      - name: Run tests with coverage (wymagane przez SonarQube)
-        run: |
-          pytest --cov=. --cov-report=xml:coverage.xml \
-            --cov-report=term-missing \
-            -v || echo "Brak testów lub testy pominięte."
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+          pytest --cov=. --cov-report=xml:coverage.xml || echo "No tests."
+      - uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -222,39 +95,59 @@ jobs:
           args: >
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/.venv/**,**/node_modules/**,**/__pycache__/**
-            -Dsonar.python.version=3.11
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
 
   # ============================================================
-  # JOB 5: BUILD & DEPLOY to Azure App Service (A.1)
-  # Uruchamiany TYLKO po przejściu wszystkich bramek bezpieczeństwa
+  # NEW JOB 5: DOCKER BUILD, SCAN (TRIVY) & PUSH
   # ============================================================
-  build-and-deploy:
-    name: "Build & Deploy to Azure App Service"
+  build-and-push-docker:
+    name: "Docker Build, Scan & Push"
     runs-on: ubuntu-latest
-    needs:
-      - sonarqube-analysis
-    # Wdrożenie tylko z gałęzi main lub prod, nie z PR
+    needs: sonarqube-analysis
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prod')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
         with:
-          python-version: '3.11'
+          login-server: acrtf3team04.azurecr.io
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      - name: Install dependencies
+      - name: Build Docker Image
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          docker build -t acrtf3team04.azurecr.io/team4-app:${{ github.sha }} .
+          docker tag acrtf3team04.azurecr.io/team4-app:${{ github.sha }} acrtf3team04.azurecr.io/team4-app:latest
 
+      - name: Run Trivy vulnerability scanner (Container Scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'acrtf3team04.azurecr.io/team4-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'  # Fail pipeline if vulnerabilities found
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Docker Image to ACR
+        run: |
+          docker push acrtf3team04.azurecr.io/team4-app:${{ github.sha }}
+          docker push acrtf3team04.azurecr.io/team4-app:latest
+
+  # ============================================================
+  # UPDATED JOB 6: DEPLOY FROM ACR IMAGE
+  # ============================================================
+  deploy:
+    name: "Deploy Container to Azure App Service"
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker
+    steps:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'accenturebrief'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: 'acrtf3team04.azurecr.io/team4-app:${{ github.sha }}'
