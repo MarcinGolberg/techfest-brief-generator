@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import datetime
 from pypdf import PdfReader
@@ -7,6 +8,8 @@ import pptx
 from openpyxl import load_workbook
 from email import policy
 from email.parser import BytesParser
+
+logger = logging.getLogger(__name__)
 
 
 class BriefInputParser:
@@ -125,7 +128,7 @@ class BriefInputParser:
 
         for file_path in file_paths:
             if not os.path.exists(file_path):
-                print(f"Warning: File '{file_path}' does not exist and will be skipped.")
+                logger.warning("File '%s' does not exist and will be skipped.", file_path)
                 continue
 
             filename = os.path.basename(file_path)
@@ -171,8 +174,8 @@ class BriefInputParser:
             try:
                 with open(output_filename, "w", encoding="utf-8") as f:
                     f.write(json_string)
-                print(f"Saved JSON file: {output_filename}")
+                logger.info("Saved JSON file: %s", output_filename)
             except Exception as e:
-                print(f"Save error: {e}")
+                logger.warning("Save error: %s", e)
 
         return json_string

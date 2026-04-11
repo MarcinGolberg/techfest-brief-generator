@@ -49,7 +49,8 @@ def extract_brief_from_text(input_text: str) -> str:
                 "content": prompt
             }
         ],
-        temperature=0
+        temperature=0,
+        timeout=30,
     )
 
     return response.choices[0].message.content
@@ -70,7 +71,8 @@ def extract_structured_text(prompt: str) -> str:
                 "content": prompt
             }
         ],
-        temperature=0.2
+        temperature=0.2,
+        timeout=30,
     )
 
     return response.choices[0].message.content
