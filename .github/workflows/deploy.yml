@@ -220,8 +220,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=team4-flask-app
-            -Dsonar.projectName="Team4 Flask App"
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.sources=.
             -Dsonar.exclusions=**/.venv/**,**/node_modules/**,**/__pycache__/**
             -Dsonar.python.version=3.11
