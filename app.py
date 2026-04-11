@@ -349,6 +349,8 @@ def finalize():
 
 
 @app.route("/generate_badges", methods=["POST"])
+@app.route("/generate_badges/", methods=["POST"])
+@app.route("/generate-badges", methods=["POST"])
 def generate_badges():
     tmp_paths = []
     try:
@@ -459,6 +461,26 @@ def generate_badges():
                 os.remove(path)
             except OSError:
                 pass
+
+
+@app.route("/__routes", methods=["GET"])
+def list_routes():
+    rules = []
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint == "static":
+            continue
+        rules.append(
+            {
+                "rule": str(rule),
+                "endpoint": rule.endpoint,
+                "methods": sorted(method for method in rule.methods if method not in {"HEAD", "OPTIONS"}),
+            }
+        )
+
+    return Response(
+        json.dumps({"routes": rules}, ensure_ascii=False),
+        mimetype="application/json; charset=utf-8",
+    )
 
 
 @app.route("/download-generated/<filename>", methods=["GET"])
