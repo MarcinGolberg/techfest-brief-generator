@@ -148,6 +148,12 @@ jobs:
           DEPENDENCYTRACK_API_KEY: ${{ secrets.DEPENDENCYTRACK_API_KEY }}
           DEPENDENCYTRACK_PROJECT_UUID: ${{ secrets.DEPENDENCYTRACK_PROJECT_UUID }}
         run: |
+          # Graceful exit if secrets are missing (e.g., in PRs from forks)
+          if [ -z "$DEPENDENCYTRACK_URL" ]; then
+            echo "WARN: DEPENDENCYTRACK_URL secret is empty or missing. Skipping DependencyTrack upload."
+            exit 0
+          fi
+
           # Wysyłanie SBOM do DependencyTrack API (BOM upload)
           SBOM_BASE64=$(base64 -w 0 sbom.json)
           PAYLOAD=$(python3 -c "
@@ -158,12 +164,14 @@ jobs:
           }
           print(json.dumps(payload))
           ")
+          
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X PUT \
             -H "Content-Type: application/json" \
             -H "X-Api-Key: ${DEPENDENCYTRACK_API_KEY}" \
             -d "${PAYLOAD}" \
             "${DEPENDENCYTRACK_URL}/api/v1/bom")
+            
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "WARN: Wysyłanie do DependencyTrack nieudane (HTTP $HTTP_STATUS). Pipeline kontynuuje."
           else
