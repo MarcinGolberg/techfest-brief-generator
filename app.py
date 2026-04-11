@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, Response, send_from_directory
 import json
 import os
 import re
-import uuid
+import tempfile
 from werkzeug.utils import secure_filename
 
 from services.brief_pipeline import analyze_inputs
@@ -16,10 +16,8 @@ from services.brief_editor import edit_brief_with_prompt
 app = Flask(__name__)
 app.json.ensure_ascii = False
 
-UPLOAD_FOLDER = "uploads"
 GENERATED_FOLDER = "generated"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(GENERATED_FOLDER, exist_ok=True)
 
 
@@ -30,25 +28,23 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
+    tmp_paths = []
     try:
         raw_message = request.form.get("message", "").strip()
         uploaded_files = request.files.getlist("files")
 
-        saved_file_paths = []
-
         for file in uploaded_files:
             if not file or not file.filename:
                 continue
-
-            original_name = secure_filename(file.filename)
-            unique_name = f"{uuid.uuid4().hex}_{original_name}"
-            save_path = os.path.join(UPLOAD_FOLDER, unique_name)
-            file.save(save_path)
-            saved_file_paths.append(save_path)
+            suffix = os.path.splitext(secure_filename(file.filename))[1]
+            fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+            os.close(fd)
+            file.save(tmp_path)
+            tmp_paths.append(tmp_path)
 
         result = analyze_inputs(
             raw_texts=[raw_message] if raw_message else [],
-            file_paths=saved_file_paths
+            file_paths=tmp_paths
         )
 
         return Response(
@@ -62,6 +58,12 @@ def analyze():
             mimetype="application/json; charset=utf-8",
             status=500
         )
+    finally:
+        for path in tmp_paths:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 @app.route("/chat_answer", methods=["POST"])
