@@ -1,6 +1,6 @@
-You are extracting structured information for a marketing brief.
+Jesteś systemem wyciągającym ustrukturyzowane informacje do briefu marketingowego.
 
-Return ONLY valid JSON with these fields:
+Zwróć WYŁĄCZNIE poprawny JSON z następującymi polami:
 - campaign_goal
 - product_or_service
 - target_audience
@@ -12,12 +12,13 @@ Return ONLY valid JSON with these fields:
 - scope_of_work
 - client_expectations
 
-Rules:
-- Use only the provided input text.
-- If information is missing, return an empty string "" for text fields or [] for list fields.
-- Do not invent facts.
-- Output only valid JSON.
-- key_messages, marketing_channels, and kpis must always be arrays.
+Zasady:
+- Korzystaj wyłącznie z dostarczonego tekstu.
+- Jeśli jakiejś informacji brakuje, zwróć pusty string "" dla pól tekstowych albo [] dla list.
+- Nie zmyślaj faktów.
+- Zwróć wyłącznie poprawny JSON.
+- key_messages, marketing_channels oraz kpis zawsze muszą być tablicami.
+- Wartości pól mają być po polsku, jeśli dane wejściowe są po polsku.
 
-Input:
+Tekst wejściowy:
 {{input_text}}

@@ -1,52 +1,54 @@
 FIELD_RULES = {
     "campaign_goal": {
-        "label": "Campaign Goal",
+        "label": "Cel kampanii",
         "type": "string",
-        "question": "What is the main goal of the campaign?"
+        "question": "Jaki jest glowny cel kampanii?"
     },
     "product_or_service": {
-        "label": "Product or Service",
+        "label": "Produkt lub usługa",
         "type": "string",
-        "question": "What product or service is being promoted?"
+        "question": "Jaki produkt lub usługa są promowane?"
     },
     "target_audience": {
-        "label": "Target Audience",
+        "label": "Grupa docelowa",
         "type": "string",
-        "question": "Who is the target audience of the campaign?"
+        "question": "Jaka jest grupa docelowa kampanii?"
     },
     "key_messages": {
-        "label": "Key Messages",
+        "label": "Kluczowe komunikaty",
         "type": "list",
-        "question": "What are the key campaign messages?"
+        "question": "Jakie są kluczowe komunikaty kampanii?"
     },
     "marketing_channels": {
-        "label": "Marketing Channels",
+        "label": "Kanały marketingowe",
         "type": "list",
-        "question": "Which marketing channels should be used?"
+        "question": "W jakich kanałach ma być prowadzona kampania?"
     },
     "tone_of_voice": {
-        "label": "Tone of Voice",
+        "label": "Ton komunikacji",
         "type": "string",
-        "question": "What should the tone of voice be?"
+        "question": "Jaki powinien być ton komunikacji?"
     },
     "kpis": {
-        "label": "KPIs",
+        "label": "KPI",
         "type": "list",
-        "question": "Which KPIs should be used to measure campaign success?"
+        "question": "Jakie KPI będą mierzyć sukces kampanii?"
     },
     "success_measurement": {
-        "label": "Success Measurement",
+        "label": "Ocena sukcesu",
         "type": "string",
-        "question": "How will campaign success be measured?"
+        "question": "Po czym rozpoznamy, że kampania zakończyła się sukcesem?"
     },
     "scope_of_work": {
-        "label": "Scope of Work",
+        "label": "Zakres działań",
         "type": "string",
-        "question": "What is the scope of work for this campaign or project?"
+        "question": "Jaki jest zakres działań w ramach kampanii lub projektu?"
     },
     "client_expectations": {
-        "label": "Client Expectations",
+        "label": "Oczekiwania klienta",
         "type": "string",
-        "question": "What are the client's expectations for the campaign or deliverables?"
+        "question": "Jakie są oczekiwania klienta wobec kampanii lub materiałów?"
     }
 }
+
+REQUIRED_FIELDS = list(FIELD_RULES.keys())

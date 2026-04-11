@@ -4,6 +4,9 @@ from datetime import datetime
 from pypdf import PdfReader
 import docx
 import pptx
+from openpyxl import load_workbook
+from email import policy
+from email.parser import BytesParser
 
 
 class BriefInputParser:
@@ -19,7 +22,7 @@ class BriefInputParser:
                 if extracted:
                     text += extracted + "\n"
         except Exception as e:
-            return f"[BŁĄD ODCZYTU PDF: {e}]"
+            return f"[PDF READ ERROR: {e}]"
         return text.strip()
 
     def _extract_docx(self, file_path):
@@ -30,7 +33,7 @@ class BriefInputParser:
                 if para.text.strip():
                     text += para.text + "\n"
         except Exception as e:
-            return f"[BŁĄD ODCZYTU DOCX: {e}]"
+            return f"[DOCX READ ERROR: {e}]"
         return text.strip()
 
     def _extract_pptx(self, file_path):
@@ -42,14 +45,63 @@ class BriefInputParser:
                     if hasattr(shape, "text") and shape.text.strip():
                         text += shape.text + "\n"
         except Exception as e:
-            return f"[BŁĄD ODCZYTU PPTX: {e}]"
+            return f"[PPTX READ ERROR: {e}]"
+        return text.strip()
+
+    def _extract_eml(self, file_path):
+        try:
+            with open(file_path, "rb") as f:
+                msg = BytesParser(policy=policy.default).parse(f)
+
+            subject = msg.get("subject", "")
+            sender = msg.get("from", "")
+            to = msg.get("to", "")
+
+            body_parts = []
+
+            if msg.is_multipart():
+                for part in msg.walk():
+                    content_type = part.get_content_type()
+                    disposition = str(part.get("Content-Disposition", ""))
+
+                    if "attachment" in disposition.lower():
+                        continue
+
+                    if content_type == "text/plain":
+                        try:
+                            body_parts.append(part.get_content())
+                        except Exception:
+                            pass
+            else:
+                try:
+                    body_parts.append(msg.get_content())
+                except Exception:
+                    pass
+
+            body = "\n".join([p for p in body_parts if p])
+
+            return f"From: {sender}\nTo: {to}\nSubject: {subject}\n\n{body}".strip()
+        except Exception as e:
+            return f"[EML READ ERROR: {e}]"
+
+    def _extract_xlsx(self, file_path):
+        text = ""
+        try:
+            wb = load_workbook(file_path, data_only=True)
+
+            for sheet in wb.worksheets:
+                text += f"\n--- SHEET: {sheet.title} ---\n"
+                for row in sheet.iter_rows(values_only=True):
+                    values = [str(cell).strip() for cell in row if cell is not None and str(cell).strip()]
+                    if values:
+                        text += " | ".join(values) + "\n"
+
+        except Exception as e:
+            return f"[XLSX READ ERROR: {e}]"
+
         return text.strip()
 
     def generate_json_payload(self, raw_texts=None, file_paths=None, save_to_file=True):
-        """
-        Konwertuje teksty i pliki do ustrukturyzowanego formatu JSON.
-        Zwraca ciąg znaków JSON oraz opcjonalnie zapisuje go do pliku.
-        """
         if raw_texts is None:
             raw_texts = []
         if file_paths is None:
@@ -58,10 +110,8 @@ class BriefInputParser:
         sources = []
         combined_text_list = []
 
-        # 1. Przetwarzanie tekstów wklejonych ręcznie / maili
         for text in raw_texts:
-            # Prosta heurystyka dla maili
-            if any(k in text for k in ["Od:", "From:", "Temat:"]):
+            if any(k in text for k in ["Od:", "From:", "Temat:", "Subject:"]):
                 source_type = "email"
             else:
                 source_type = "manual_text"
@@ -71,29 +121,34 @@ class BriefInputParser:
                 "filename": None,
                 "content": text
             })
-            combined_text_list.append(f"--- Źródło: {source_type.upper()} ---\n{text}")
+            combined_text_list.append(f"--- SOURCE: {source_type.upper()} ---\n{text}")
 
-        # 2. Przetwarzanie plików
         for file_path in file_paths:
             if not os.path.exists(file_path):
-                print(f"Ostrzeżenie: Plik '{file_path}' nie istnieje i zostanie pominięty.")
+                print(f"Warning: File '{file_path}' does not exist and will be skipped.")
                 continue
 
             filename = os.path.basename(file_path)
-            ext = filename.lower().split('.')[-1]
+            ext = filename.lower().split(".")[-1]
             content = ""
 
-            if ext == 'pdf':
+            if ext == "pdf":
                 content = self._extract_pdf(file_path)
                 doc_type = "pdf"
-            elif ext in ['docx', 'doc']:
+            elif ext in ["docx", "doc"]:
                 content = self._extract_docx(file_path)
                 doc_type = "docx"
-            elif ext == 'pptx':
+            elif ext == "pptx":
                 content = self._extract_pptx(file_path)
                 doc_type = "pptx"
+            elif ext == "eml":
+                content = self._extract_eml(file_path)
+                doc_type = "email_file"
+            elif ext == "xlsx":
+                content = self._extract_xlsx(file_path)
+                doc_type = "xlsx"
             else:
-                content = f"[NIEWSPIERANY FORMAT PLIKU: {ext}]"
+                content = f"[UNSUPPORTED FILE FORMAT: {ext}]"
                 doc_type = "unknown"
 
             sources.append({
@@ -101,54 +156,23 @@ class BriefInputParser:
                 "filename": filename,
                 "content": content
             })
-            combined_text_list.append(f"--- Źródło: PLIK {filename} ---\n{content}")
+            combined_text_list.append(f"--- SOURCE: FILE {filename} ---\n{content}")
 
-        # 3. Budowanie finalnego słownika
         result = {
             "sources": sources,
             "combined_text": "\n\n".join(combined_text_list)
         }
 
-        # Konwersja do stringa JSON
         json_string = json.dumps(result, ensure_ascii=False, indent=2)
 
-        # 4. Zapisywanie na dysk jako plik
         if save_to_file:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"parsed_input_{timestamp}.json"
             try:
-                with open(output_filename, 'w', encoding='utf-8') as f:
+                with open(output_filename, "w", encoding="utf-8") as f:
                     f.write(json_string)
-                print(f"✅ Zapisano plik JSON: {output_filename}")
+                print(f"Saved JSON file: {output_filename}")
             except Exception as e:
-                print(f"⚠️ Błąd zapisu pliku: {e}")
+                print(f"Save error: {e}")
 
-        # Zwrócenie formatu jako zwykły tekst (zmienna)
         return json_string
-
-
-# ==========================================
-# PRZYKŁAD UŻYCIA
-# ==========================================
-if __name__ == "__main__":
-    parser = BriefInputParser()
-
-    # Dane testowe
-    teksty_od_usera = [
-        "Cześć, zróbmy kampanię dla nowych butów. Grupa docelowa to młodzież."
-    ]
-    pliki_od_usera = [
-        "TechFest 3.0 - Zadanie.pdf"  # Upewnij się, że ten plik jest w tym samym folderze
-    ]
-
-    # Wygenerowanie JSON-a (funkcja zwraca tekst i tworzy plik)
-    print("Parsowanie dokumentów wejściowych...")
-    wynik_tekstowy = parser.generate_json_payload(
-        raw_texts=teksty_od_usera,
-        file_paths=pliki_od_usera,
-        save_to_file=True
-    )
-
-    # Wyświetlenie wynikowego stringa (skrócone dla czytelności w konsoli)
-    print("\nWYNIKOWY TEKST JSON (fragment):\n")
-    print(wynik_tekstowy[:500] + "\n...\n")

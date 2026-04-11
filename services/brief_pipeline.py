@@ -40,7 +40,7 @@ def analyze_inputs(raw_texts=None, file_paths=None):
 
     return {
         "sources": payload.get("sources", []),
-        "combined_text": combined_text,
+        #"combined_text": combined_text,
         "brief": brief_json,
         "missing_fields": missing_fields
     }
