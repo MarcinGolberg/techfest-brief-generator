@@ -1,0 +1,23 @@
+You are extracting structured information for a marketing brief.
+
+Return ONLY valid JSON with these fields:
+- campaign_goal
+- product_or_service
+- target_audience
+- key_messages
+- marketing_channels
+- tone_of_voice
+- kpis
+- success_measurement
+- scope_of_work
+- client_expectations
+
+Rules:
+- Use only the provided input text.
+- If information is missing, return an empty string "" for text fields or [] for list fields.
+- Do not invent facts.
+- Output only valid JSON.
+- key_messages, marketing_channels, and kpis must always be arrays.
+
+Input:
+{{input_text}}

@@ -1,1 +1,6 @@
 flask
+openai
+python-dotenv
+pypdf
+python-docx
+python-pptx
