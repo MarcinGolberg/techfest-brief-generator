@@ -31,13 +31,19 @@ header::after {
 header.scrolled::after { transform: scaleX(1); }
 
 .logo {
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 152px;
+  flex-shrink: 0;
   user-select: none;
 }
-.logo em { color: var(--purple); font-style: normal; }
+
+.logo img {
+  display: block;
+  height: 24px;
+  width: auto;
+}
 
 nav { display: flex; gap: 32px; align-items: center; }
 

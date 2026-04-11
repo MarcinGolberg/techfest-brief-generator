@@ -141,11 +141,6 @@ function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
         ? `<div class="badge-plan-image-wrap"><img class="badge-plan-image" src="${badge.preview_url}" alt="${escapeHtml(badge.name || 'Badge preview')}"></div>`
         : ''}
       ${badge.error ? `<div class="badge-plan-error">${escapeHtml(badge.error)}</div>` : ''}
-      <div class="badge-workflow-actions">
-        ${badge.download_url
-          ? `<a class="btn btn-primary btn-sm" href="${badge.download_url}" download>↓ ${escapeHtml((badge.format || 'png').toUpperCase())}</a>`
-          : ''}
-      </div>
     </div>`).join('');
 
   return `
@@ -173,7 +168,7 @@ function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
         ${itemsHtml || '<div class="badge-plan-item"><div class="badge-plan-name">Brak wariantów badge\'y.</div></div>'}
       </div>
       <div class="badge-workflow-actions">
-        ${artifactDownloadUrl ? `<a class="btn btn-primary btn-sm" href="${artifactDownloadUrl}" download>↓ JSON</a>` : ''}
+        ${artifactDownloadUrl ? `<a class="btn btn-primary btn-sm" href="${artifactDownloadUrl}" download>↓ PNG batch</a>` : ''}
       </div>
     </div>`;
 }

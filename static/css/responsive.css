@@ -1,6 +1,7 @@
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 768px) {
   header { padding: 0 24px; }
+  .chat-header { padding: 0 24px; }
   nav { display: none; }
 
   .hero { padding: 56px 24px 48px; }

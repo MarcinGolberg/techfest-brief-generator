@@ -248,10 +248,3 @@
   color: #e8e8e8;
   font-weight: 700;
 }
-
-.badge-workflow-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}

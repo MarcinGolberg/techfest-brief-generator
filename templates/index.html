@@ -21,7 +21,9 @@
 
   <!-- ── Header ──────────────────────────────────────── -->
   <header id="site-header">
-    <div class="logo">accent<em>ure</em></div>
+    <div class="logo">
+      <img src="{{ url_for('serve_image', filename='Accenture-logo-white.png') }}" alt="Accenture logo" />
+    </div>
     <nav>
       <a href="#">Services</a>
       <a href="#">Industries</a>
@@ -176,7 +178,9 @@
 
     <div class="chat-header">
       <div class="chat-header-info">
-        <div class="logo">accent<em>ure</em></div>
+        <div class="logo">
+          <img src="{{ url_for('serve_image', filename='Accenture-logo-white.png') }}" alt="Accenture logo" />
+        </div>
         <span class="chat-product-tag" id="chat-product-label">Brief</span>
       </div>
       <button class="btn btn-primary" id="btn-chat-close" style="font-size:0.75rem; padding:8px 18px;">

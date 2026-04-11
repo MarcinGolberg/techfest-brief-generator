@@ -34,7 +34,7 @@ os.makedirs(GENERATED_FOLDER, exist_ok=True)
 
 # Only generated files produced by this app are allowed through download routes
 _GENERATED_FILE_RE = re.compile(
-    r"^(brief_[a-f0-9]{32}\.(docx|pdf)|badge_generation_[a-f0-9]{32}\.json|badge_[a-f0-9]{32}_[a-z0-9-]+\.(png|jpg|jpeg))$"
+    r"^(brief_[a-f0-9]{32}\.(docx|pdf)|badge_generation_[a-f0-9]{32}\.json|badge_batch_[a-f0-9]{32}\.zip|badge_[a-f0-9]{32}_[a-z0-9-]+\.(png|jpg|jpeg))$"
 )
 
 VALID_FORMATS = {"docx", "pdf"}
@@ -435,6 +435,7 @@ def generate_badges():
         )
 
         filename = os.path.basename(badge_generation["file_path"])
+        batch_zip_filename = os.path.basename(badge_generation.get("batch_zip_path", "")) if badge_generation.get("batch_zip_path") else None
         for badge in badge_generation.get("badges", []):
             image_filename = badge.get("filename")
             if not image_filename:
@@ -447,7 +448,7 @@ def generate_badges():
                 "status": badge_generation.get("status", "completed"),
                 "message": badge_generation.get("message", "Proces generowania badge'y został zakończony"),
                 "badge_generation": badge_generation,
-                "download_url": f"/download-generated/{filename}",
+                "download_url": f"/download-generated/{batch_zip_filename}" if batch_zip_filename else f"/download-generated/{filename}",
             }, ensure_ascii=False),
             mimetype="application/json; charset=utf-8",
         )
@@ -495,6 +496,16 @@ def preview_generated(filename):
     if not _GENERATED_FILE_RE.match(filename):
         return _json_error("Not found", 404)
     return send_from_directory(GENERATED_FOLDER, filename, as_attachment=False)
+
+
+@app.route("/images/<filename>", methods=["GET"])
+def serve_image(filename):
+    safe_name = os.path.basename(filename)
+    images_dir = os.path.join(_BASE_DIR, "images")
+    image_path = os.path.join(images_dir, safe_name)
+    if not os.path.isfile(image_path):
+        return _json_error("Not found", 404)
+    return send_from_directory(images_dir, safe_name, as_attachment=False)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

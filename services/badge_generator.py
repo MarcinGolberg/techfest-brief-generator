@@ -4,6 +4,7 @@ import os
 import re
 import unicodedata
 import uuid
+import zipfile
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -823,6 +824,21 @@ def _write_image_asset(output_dir: str, basename: str, image_bytes: bytes, reque
     return {"filename": filename, "file_path": file_path, "format": file_extension}
 
 
+def _write_badge_batch_zip(output_dir: str, job_id: str, badges: List[Dict[str, Any]]) -> Dict[str, str]:
+    zip_filename = f"badge_batch_{job_id}.zip"
+    zip_path = os.path.join(output_dir, zip_filename)
+
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for badge in badges:
+            file_path = badge.get("file_path")
+            filename = badge.get("filename")
+            if not file_path or not filename or not os.path.exists(file_path):
+                continue
+            archive.write(file_path, arcname=filename)
+
+    return {"batch_zip_filename": zip_filename, "batch_zip_path": zip_path}
+
+
 def start_badge_generation(
     brief: Dict[str, Any],
     document_brief: Dict[str, Any],
@@ -901,6 +917,8 @@ def start_badge_generation(
     with open(manifest_path, "w", encoding="utf-8") as handle:
         json.dump(plan, handle, ensure_ascii=False, indent=2)
 
+    batch_zip = _write_badge_batch_zip(output_dir=output_dir, job_id=plan["job_id"], badges=plan["badges"])
+    plan.update(batch_zip)
     plan["file_path"] = manifest_path
     plan["filename"] = manifest_filename
     return plan
