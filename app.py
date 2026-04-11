@@ -14,6 +14,7 @@ from services.chat_agent import validate_and_process_answer
 from services.document_brief_builder import build_document_brief
 from services.brief_generator import generate_brief_file
 from services.brief_editor import edit_brief_with_prompt
+from services.badge_generator import load_participants_from_xlsx, start_badge_generation
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -32,9 +33,13 @@ GENERATED_FOLDER = os.path.join(_BASE_DIR, "generated")
 os.makedirs(GENERATED_FOLDER, exist_ok=True)
 
 # Only generated files produced by this app are allowed through download routes
-_GENERATED_FILE_RE = re.compile(r"^brief_[a-f0-9]{32}\.(docx|pdf)$")
+_GENERATED_FILE_RE = re.compile(
+    r"^(brief_[a-f0-9]{32}\.(docx|pdf)|badge_generation_[a-f0-9]{32}\.json|badge_[a-f0-9]{32}_[a-z0-9-]+\.(png|jpg|jpeg))$"
+)
 
 VALID_FORMATS = {"docx", "pdf"}
+VALID_BADGE_FORMATS = {"png", "jpg", "jpeg"}
+VALID_PARTICIPANT_UPLOAD_EXTENSIONS = {"xlsx"}
 
 
 # ── Startup helpers ───────────────────────────────────────────────────────────
@@ -80,6 +85,16 @@ def _require_json(*keys):
         if key not in data:
             return None, _json_error(f"Missing required field: '{key}'")
     return data, None
+
+
+def _load_json_form_field(field_name, *, default=None):
+    raw_value = request.form.get(field_name)
+    if raw_value is None or raw_value == "":
+        return default, None
+    try:
+        return json.loads(raw_value), None
+    except json.JSONDecodeError:
+        return None, _json_error(f"Field '{field_name}' must contain valid JSON")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -347,6 +362,119 @@ def finalize():
     except Exception as exc:
         logger.exception("Error in /finalize")
         return _json_error(str(exc), 500)
+
+
+@app.route("/generate_badges", methods=["POST"])
+def generate_badges():
+    tmp_paths = []
+    try:
+        participants = []
+        participant_upload = None
+
+        if request.mimetype == "application/json":
+            data, err = _require_json("brief", "document_brief")
+            if err:
+                return err
+            brief = data["brief"]
+            document_brief = data["document_brief"]
+            image_format = str(data.get("format", "png")).strip().lower()
+            participants = data.get("participants", [])
+            sources = data.get("sources", [])
+        else:
+            brief, err = _load_json_form_field("brief")
+            if err:
+                return err
+            document_brief, err = _load_json_form_field("document_brief")
+            if err:
+                return err
+            participants, err = _load_json_form_field("participants", default=[])
+            if err:
+                return err
+            sources, err = _load_json_form_field("sources", default=[])
+            if err:
+                return err
+            image_format = str(request.form.get("format", "png")).strip().lower()
+            participant_upload = request.files.get("participants_file")
+
+            if brief is None:
+                return _json_error("Missing required field: 'brief'")
+            if document_brief is None:
+                return _json_error("Missing required field: 'document_brief'")
+
+        if not isinstance(brief, dict):
+            return _json_error("'brief' must be an object")
+        if not isinstance(document_brief, dict):
+            return _json_error("'document_brief' must be an object")
+        if not isinstance(participants, list):
+            return _json_error("'participants' must be an array")
+        if not isinstance(sources, list):
+            return _json_error("'sources' must be an array")
+        if image_format not in VALID_BADGE_FORMATS:
+            return _json_error(f"Invalid badge format '{image_format}'. Use 'png' or 'jpg'")
+
+        if participant_upload and participant_upload.filename:
+            extension = os.path.splitext(secure_filename(participant_upload.filename))[1].lower().lstrip(".")
+            if extension not in VALID_PARTICIPANT_UPLOAD_EXTENSIONS:
+                return _json_error("Participant file must be an .xlsx file")
+
+            fd, tmp_path = tempfile.mkstemp(suffix=f".{extension}")
+            os.close(fd)
+            participant_upload.save(tmp_path)
+            tmp_paths.append(tmp_path)
+            participants = load_participants_from_xlsx(tmp_path)
+            if not participants:
+                return _json_error(
+                    "Nie udało się odczytać uczestników z Excela. "
+                    "Oczekiwane kolumny to np. 'Imię i nazwisko', 'Firma', 'Stanowisko', 'Rola na konferencji'."
+                )
+
+        missing_fields = detect_missing_fields(brief)
+        if missing_fields:
+            return Response(
+                json.dumps({
+                    "error": "Brief nadal ma brakujące pola",
+                    "missing_fields": missing_fields,
+                }, ensure_ascii=False),
+                mimetype="application/json; charset=utf-8",
+                status=400,
+            )
+
+        badge_generation = start_badge_generation(
+            brief=brief,
+            document_brief=document_brief,
+            output_dir=GENERATED_FOLDER,
+            image_format=image_format,
+            participants=participants,
+            sources=sources,
+        )
+
+        filename = os.path.basename(badge_generation["file_path"])
+        for badge in badge_generation.get("badges", []):
+            image_filename = badge.get("filename")
+            if not image_filename:
+                continue
+            badge["download_url"] = f"/download-generated/{image_filename}"
+            badge["preview_url"] = f"/preview-generated/{image_filename}"
+
+        return Response(
+            json.dumps({
+                "status": badge_generation.get("status", "completed"),
+                "message": badge_generation.get("message", "Proces generowania badge'y został zakończony"),
+                "badge_generation": badge_generation,
+                "download_url": f"/download-generated/{filename}",
+            }, ensure_ascii=False),
+            mimetype="application/json; charset=utf-8",
+        )
+
+    except Exception as exc:
+        logger.exception("Error in /generate_badges")
+        return _json_error(str(exc), 500)
+    finally:
+        for path in tmp_paths:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 @app.route("/download-generated/<filename>", methods=["GET"])

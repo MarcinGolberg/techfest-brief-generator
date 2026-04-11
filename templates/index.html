@@ -1062,6 +1062,171 @@
       font-weight: 700;
     }
 
+    .badge-workflow {
+      border: 1px solid #1a1a1a;
+      background: #090909;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .badge-workflow-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+
+    .badge-workflow-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.35;
+    }
+
+    .badge-workflow-copy {
+      font-size: 0.8rem;
+      line-height: 1.65;
+      color: #b9b9b9;
+      margin: 0 0 14px;
+    }
+
+    .badge-upload-box {
+      border: 1px solid #242424;
+      background: #050505;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    .badge-upload-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #f5f5f5;
+      margin-bottom: 8px;
+    }
+
+    .badge-upload-input {
+      display: block;
+      width: 100%;
+      color: #d7d7d7;
+      font-size: 0.78rem;
+    }
+
+    .badge-upload-hint {
+      margin-top: 10px;
+      font-size: 0.74rem;
+      line-height: 1.55;
+      color: #989898;
+    }
+
+    .badge-status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border: 1px solid #2a2a2a;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-status-pill.waiting {
+      color: #d4d4d4;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .badge-status-pill.started {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.08);
+      border-color: rgba(74, 222, 128, 0.22);
+    }
+
+    .badge-status-pill.failed {
+      color: #ff8b8b;
+      background: rgba(255, 139, 139, 0.08);
+      border-color: rgba(255, 139, 139, 0.22);
+    }
+
+    .badge-plan-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .badge-plan-item {
+      border: 1px solid #1e1e1e;
+      background: #050505;
+      padding: 14px;
+    }
+
+    .badge-plan-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .badge-plan-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.4;
+    }
+
+    .badge-plan-goal,
+    .badge-plan-copy,
+    .badge-plan-prompt {
+      font-size: 0.76rem;
+      line-height: 1.6;
+      color: #a8a8a8;
+    }
+
+    .badge-plan-copy,
+    .badge-plan-prompt {
+      margin-top: 8px;
+    }
+
+    .badge-plan-image-wrap {
+      margin-top: 12px;
+      border: 1px solid #1e1e1e;
+      background: #111;
+      padding: 10px;
+    }
+
+    .badge-plan-image {
+      width: 100%;
+      display: block;
+      background: #fff;
+      border: 1px solid #262626;
+    }
+
+    .badge-plan-error {
+      margin-top: 10px;
+      font-size: 0.76rem;
+      line-height: 1.5;
+      color: #ff7b7b;
+    }
+
+    .badge-plan-copy strong,
+    .badge-plan-prompt strong {
+      color: #e8e8e8;
+      font-weight: 700;
+    }
+
+    .badge-workflow-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
     /* ── Responsive ───────────────────────────────────── */
     @media (max-width: 768px) {
       header { padding: 0 24px; }
@@ -1272,7 +1437,7 @@
         <div class="brief-panel-header">
           <span class="brief-panel-title">Podgląd briefu</span>
           <div class="brief-panel-actions" id="brief-panel-actions" style="display:none;">
-            <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
+            <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj dokument &gt;</button>
           </div>
         </div>
         <div id="brief-panel-status" class="brief-panel-status" style="display:none;"></div>
@@ -1451,11 +1616,25 @@
     let currentMissing = [];
     let currentSources = [];
     let currentCombinedText = '';
+    let currentDocumentBrief = null;
+    let currentDocumentDownloadUrl = '';
+    let currentBadgeGeneration = null;
+    let currentBadgeDownloadUrl = '';
+    let briefPanelMode = 'brief';
     let fieldConversation = [];   // [{role, content}] for the current field only
     let invalidStreak = 0;        // consecutive "invalid" responses for the current field
     let chatMode = 'filling';     // 'filling' | 'editing'
 
+    function resetGeneratedArtifacts() {
+      currentDocumentBrief = null;
+      currentDocumentDownloadUrl = '';
+      currentBadgeGeneration = null;
+      currentBadgeDownloadUrl = '';
+      briefPanelMode = 'brief';
+    }
+
     function startChatMode(data) {
+      resetGeneratedArtifacts();
       currentBrief   = data.brief;
       currentMissing = data.missing_fields || [];
       currentSources = data.sources || [];
@@ -1473,6 +1652,7 @@
       document.getElementById('chat-input-bar').style.display = 'flex';
       renderSidebar();
       showBriefPanel();
+      renderBriefPanelHeader();
       renderBriefPanel();
 
       addAIMessage(
@@ -1495,6 +1675,33 @@
       const body    = document.querySelector('.chat-body');
       panel.classList.add('visible');
       body.classList.add('split');
+    }
+
+    function renderBriefPanelHeader() {
+      const header = document.querySelector('.brief-panel-header');
+      if (!header) return;
+
+      if (briefPanelMode === 'document' && currentDocumentBrief) {
+        header.innerHTML = `
+          <span class="brief-panel-title">Podgląd dokumentu</span>
+          <div class="brief-panel-actions" id="brief-panel-actions" style="display:flex;">
+            <button class="btn btn-primary btn-sm" onclick="returnToBriefView()">← Edytuj</button>
+            ${currentDocumentDownloadUrl
+              ? `<a class="btn btn-primary btn-sm" href="${currentDocumentDownloadUrl}" download>↓ DOCX</a>`
+              : ''}
+            <button class="btn btn-primary btn-sm" id="btn-pdf-download" onclick="downloadAsPdf(this)">↓ PDF</button>
+            ${!currentBadgeGeneration
+              ? '<button class="btn btn-primary btn-sm" id="btn-accept-brief" onclick="acceptDocumentBrief(this)">Akceptuj brief &gt;</button>'
+              : '<button class="btn btn-primary btn-sm" id="btn-accept-brief" onclick="acceptDocumentBrief(this)">Generuj ponownie &gt;</button>'}
+          </div>`;
+        return;
+      }
+
+      header.innerHTML = `
+        <span class="brief-panel-title">Podgląd briefu</span>
+        <div class="brief-panel-actions" id="brief-panel-actions" style="display:${chatMode === 'editing' ? 'flex' : 'none'};">
+          <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj dokument &gt;</button>
+        </div>`;
     }
 
     function renderBriefPanel() {
@@ -1586,7 +1793,7 @@
     }
 
     function escapeHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     function addAIMessage(html, focusInput) {
@@ -1673,6 +1880,7 @@
         if (status === 'accepted') {
           const payload  = data.payload || {};
           const justFilled = field.field;
+          resetGeneratedArtifacts();
           currentBrief   = payload.brief   ?? currentBrief;
           currentMissing = payload.missing_fields ?? [];
           if (payload.sources)        currentSources      = payload.sources;
@@ -1794,6 +2002,7 @@
         }
 
         const justFilled2 = fieldName;
+        resetGeneratedArtifacts();
         currentBrief   = data.brief;
         currentMissing = data.missing_fields;
         renderSidebar();
@@ -1872,8 +2081,7 @@
         inputBar.parentNode.insertBefore(badge, inputBar);
       }
 
-      // Reveal the generate controls in the brief panel header
-      document.getElementById('brief-panel-actions').style.display = 'flex';
+      renderBriefPanelHeader();
 
       // Show completion notification in chat
       addAIMessage(
@@ -1926,20 +2134,13 @@
     }
 
     function renderDocumentPreview(docBrief, docxDownloadUrl) {
+      briefPanelMode = 'document';
+      currentDocumentBrief = docBrief;
+      currentDocumentDownloadUrl = docxDownloadUrl || '';
+
       const panel   = document.getElementById('brief-panel');
       const content = document.getElementById('brief-panel-content');
-      const header  = document.querySelector('.brief-panel-header');
-
-      // Swap header to preview mode with both download options
-      header.innerHTML = `
-        <span class="brief-panel-title">Podgląd dokumentu</span>
-        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-          <button class="btn btn-primary btn-sm" onclick="returnToBriefView()">← Edytuj</button>
-          ${docxDownloadUrl
-            ? `<a class="btn btn-primary btn-sm" href="${docxDownloadUrl}" download>↓ DOCX</a>`
-            : ''}
-          <button class="btn btn-primary btn-sm" id="btn-pdf-download" onclick="downloadAsPdf(this)">↓ PDF</button>
-        </div>`;
+      renderBriefPanelHeader();
 
       // Build the HTML document body
       const safe     = s => s ? escapeHtml(String(s)) : '';
@@ -1971,8 +2172,34 @@
             : `<p class="doc-body">${safe(s.value)}</p>`}
         </div>`).join('');
 
+      const badgeWorkflowHtml = currentBadgeGeneration
+        ? renderBadgeGenerationMarkup(currentBadgeGeneration, currentBadgeDownloadUrl)
+        : `
+          <div class="badge-workflow">
+            <div class="badge-workflow-head">
+              <div>
+                <div class="doc-section-title">Następny krok</div>
+                <div class="badge-workflow-title">Akceptuj brief, aby uruchomić generowanie badge'y</div>
+              </div>
+              <span class="badge-status-pill waiting">oczekuje</span>
+            </div>
+            <p class="badge-workflow-copy">
+              Po akceptacji uruchomię generowanie wariantów badge'y zgodnych z brandbookiem Accenture
+              i pokażę gotowe pliki oraz statusy renderowania.
+            </p>
+            <div class="badge-upload-box">
+              <label class="badge-upload-label" for="badge-participants-file">Lista uczestników (.xlsx)</label>
+              <input class="badge-upload-input" id="badge-participants-file" type="file" accept=".xlsx">
+              <div class="badge-upload-hint">
+                Opcjonalnie dodaj Excel z kolumnami typu: Imię i nazwisko, Firma, Stanowisko, Rola na konferencji.
+                Jeśli plik nie zostanie dodany, system wygeneruje przykładowe warianty per typ uczestnika.
+              </div>
+            </div>
+          </div>`;
+
       content.innerHTML = `
         <div class="doc-preview">
+          ${badgeWorkflowHtml}
           <div class="doc-inner">
             <div class="doc-title">${safe(docBrief.title || 'BRIEF NA KAMPANIĘ')}</div>
             ${sectionsHtml}
@@ -1981,6 +2208,130 @@
 
       content.scrollTop = 0;
       panel.scrollTop   = 0;
+    }
+
+    function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
+      const badges = Array.isArray(badgeGeneration?.badges) ? badgeGeneration.badges : [];
+      const summary = badgeGeneration?.summary || {};
+      const workflowStatus = String(badgeGeneration?.status || 'started');
+      const workflowStatusClass = workflowStatus.includes('fail') ? 'failed' : 'started';
+      const itemsHtml = badges.map(badge => `
+        <div class="badge-plan-item">
+          <div class="badge-plan-meta">
+            <div class="badge-plan-name">${escapeHtml(badge.name || 'Badge')}</div>
+            <span class="badge-status-pill ${(String(badge.status || '').includes('fail')) ? 'failed' : 'started'}">${escapeHtml(badge.status || 'started')}</span>
+          </div>
+          <div class="badge-plan-goal">${escapeHtml(badge.visual_cue || '')}</div>
+          <div class="badge-plan-copy"><strong>Typ uczestnika:</strong> ${escapeHtml(badge.participant_type || '—')}</div>
+          <div class="badge-plan-copy"><strong>Przykładowe dane:</strong> ${escapeHtml([
+            badge.sample_participant?.first_name,
+            badge.sample_participant?.last_name,
+            badge.sample_participant?.company,
+            badge.sample_participant?.position
+          ].filter(Boolean).join(' / ') || '—')}</div>
+          <div class="badge-plan-copy"><strong>Brandbook:</strong> ${escapeHtml(
+            badge.badgeLayoutData?.branding?.brandbookSource || badge.brandbook_source || badgeGeneration?.summary?.brandbook_source || 'Brand guidelines'
+          )}</div>
+          <div class="badge-plan-prompt"><strong>Background prompt:</strong> ${escapeHtml(badge.backgroundPrompt || '—')}</div>
+          <div class="badge-plan-prompt"><strong>Negative prompt:</strong> ${escapeHtml(badge.negativePrompt || '—')}</div>
+          <div class="badge-plan-prompt"><strong>Deterministic layout:</strong> ${escapeHtml([
+            badge.badgeLayoutData?.conferenceName,
+            badge.badgeLayoutData?.participant?.participantType,
+            badge.badgeLayoutData?.participant?.firstName,
+            badge.badgeLayoutData?.participant?.lastName
+          ].filter(Boolean).join(' / ') || '—')}</div>
+          ${badge.preview_url
+            ? `<div class="badge-plan-image-wrap"><img class="badge-plan-image" src="${badge.preview_url}" alt="${escapeHtml(badge.name || 'Badge preview')}"></div>`
+            : ''}
+          ${badge.error ? `<div class="badge-plan-error">${escapeHtml(badge.error)}</div>` : ''}
+          <div class="badge-workflow-actions">
+            ${badge.download_url
+              ? `<a class="btn btn-primary btn-sm" href="${badge.download_url}" download>↓ ${escapeHtml((badge.format || 'png').toUpperCase())}</a>`
+              : ''}
+          </div>
+        </div>`).join('');
+
+      return `
+        <div class="badge-workflow">
+          <div class="badge-workflow-head">
+            <div>
+              <div class="doc-section-title">Badge workflow</div>
+              <div class="badge-workflow-title">Proces generowania badge'y został uruchomiony</div>
+            </div>
+            <span class="badge-status-pill ${workflowStatusClass}">${escapeHtml(workflowStatus)}</span>
+          </div>
+          <p class="badge-workflow-copy">
+            ${escapeHtml(badgeGeneration?.message || 'Szkielet procesu został uruchomiony.')}
+            ${summary.generated_count != null ? ` Wygenerowano ${summary.generated_count} z ${summary.variants_count || badges.length} wariantów.` : ''}
+            ${summary.participants_count ? ` Lista uczestników zawiera ${summary.participants_count} pozycji.` : ''}
+          </p>
+          <div class="badge-upload-box">
+            <label class="badge-upload-label" for="badge-participants-file">Lista uczestników (.xlsx)</label>
+            <input class="badge-upload-input" id="badge-participants-file" type="file" accept=".xlsx">
+            <div class="badge-upload-hint">
+              Dodaj nowy Excel i użyj „Generuj ponownie”, jeśli chcesz przygotować badge'e dla innej listy uczestników.
+            </div>
+          </div>
+          <div class="badge-plan-grid">
+            ${itemsHtml || '<div class="badge-plan-item"><div class="badge-plan-name">Brak wariantów badge\'y.</div></div>'}
+          </div>
+          <div class="badge-workflow-actions">
+            ${artifactDownloadUrl ? `<a class="btn btn-primary btn-sm" href="${artifactDownloadUrl}" download>↓ JSON</a>` : ''}
+          </div>
+        </div>`;
+    }
+
+    async function acceptDocumentBrief(btn) {
+      if (!currentDocumentBrief) return;
+
+      const statusEl = document.getElementById('brief-panel-status');
+      const participantFile = document.getElementById('badge-participants-file')?.files?.[0] || null;
+      const original = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = 'Uruchamiam…';
+      statusEl.textContent = 'Trwa uruchamianie procesu generowania badge’y…';
+      statusEl.style.color = 'var(--gray-dark)';
+      statusEl.style.display = 'block';
+
+      try {
+        const formData = new FormData();
+        formData.append('brief', JSON.stringify(currentBrief));
+        formData.append('document_brief', JSON.stringify(currentDocumentBrief));
+        formData.append('sources', JSON.stringify(currentSources || []));
+        formData.append('format', 'png');
+        if (participantFile) {
+          formData.append('participants_file', participantFile);
+        }
+
+        const res = await fetch('/generate_badges', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          const detail = data.error ? ` (${data.error})` : '';
+          statusEl.textContent = `Błąd: Nie udało się uruchomić badge’y${detail}.`;
+          statusEl.style.color = '#c00';
+          btn.disabled = false;
+          btn.textContent = original;
+          return;
+        }
+
+        currentBadgeGeneration = data.badge_generation || null;
+        currentBadgeDownloadUrl = data.download_url || '';
+        statusEl.style.display = 'none';
+        renderDocumentPreview(currentDocumentBrief, currentDocumentDownloadUrl);
+        addAIMessage('Brief został zaakceptowany. Zakończyłam próbę wygenerowania wariantów badge’y i dodałam wyniki do panelu.', false);
+        showToast('Badge’e przetworzone');
+      } catch (err) {
+        statusEl.textContent = `Błąd połączenia: ${err.message}`;
+        statusEl.style.color = '#c00';
+        btn.disabled = false;
+        btn.textContent = original;
+      }
     }
 
     async function downloadAsPdf(btn) {
@@ -2026,12 +2377,10 @@
     }
 
     function returnToBriefView() {
-      const header = document.querySelector('.brief-panel-header');
-      header.innerHTML = `
-        <span class="brief-panel-title">Podgląd briefu</span>
-        <div class="brief-panel-actions" id="brief-panel-actions" style="display:flex;">
-          <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
-        </div>`;
+      const panelStatus = document.getElementById('brief-panel-status');
+      if (panelStatus) panelStatus.style.display = 'none';
+      briefPanelMode = 'brief';
+      renderBriefPanelHeader();
       renderBriefPanel();
     }
 
@@ -2059,10 +2408,11 @@
           return;
         }
 
-        const prevBrief = currentBrief;
+        resetGeneratedArtifacts();
         currentBrief    = data.brief;
         currentMissing  = data.missing_fields || [];
         renderSidebar();
+        renderBriefPanelHeader();
 
         // Flash all updated fields
         (data.updated_fields || []).forEach(f => {
@@ -2079,7 +2429,7 @@
           document.getElementById('chat-input').placeholder = 'Wpisz odpowiedź…';
           const badge = document.getElementById('edit-mode-badge');
           if (badge) badge.remove();
-          document.getElementById('brief-panel-actions').style.display = 'none';
+          renderBriefPanelHeader();
           setTimeout(() => askNext(), 900);
         }
 
@@ -2109,21 +2459,14 @@
       const badge = document.getElementById('edit-mode-badge');
       if (badge) badge.remove();
 
-      // Restore brief panel header in case preview mode was active
-      const panelHeader = document.querySelector('.brief-panel-header');
-      if (panelHeader) {
-        panelHeader.innerHTML = `
-          <span class="brief-panel-title">Podgląd briefu</span>
-          <div class="brief-panel-actions" id="brief-panel-actions" style="display:none;">
-            <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
-          </div>`;
-      }
+      chatMode = 'filling';
+      resetGeneratedArtifacts();
+      renderBriefPanelHeader();
 
       // Hide panel status
       const panelStatus = document.getElementById('brief-panel-status');
       if (panelStatus) panelStatus.style.display = 'none';
 
-      chatMode = 'filling';
       document.body.style.overflow = '';
     }
 
