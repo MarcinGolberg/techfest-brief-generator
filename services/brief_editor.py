@@ -58,6 +58,7 @@ def edit_brief_with_prompt(brief: dict, edit_prompt: str) -> dict:
             {"role": "user",   "content": context},
         ],
         temperature=0.3,
+        timeout=30,
         response_format={"type": "json_object"},
     )
 

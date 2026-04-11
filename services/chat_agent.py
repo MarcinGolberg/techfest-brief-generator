@@ -72,6 +72,7 @@ def validate_and_process_answer(
             {"role": "user",   "content": context_block},
         ],
         temperature=0.4,
+        timeout=30,
         response_format={"type": "json_object"},
     )
 
