@@ -19,7 +19,6 @@ def analyze_inputs(raw_texts=None, file_paths=None):
         raise ValueError("Brak tekstu wejściowego po parsowaniu.")
 
     raw_ai_response = extract_brief_from_text(combined_text)
-
     cleaned_response = raw_ai_response.strip()
 
     if cleaned_response.startswith("```json"):

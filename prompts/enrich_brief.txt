@@ -1,0 +1,34 @@
+You are transforming a structured marketing brief into a polished document brief.
+
+Return ONLY valid JSON with these fields:
+- title
+- executive_summary
+- background
+- objective
+- target_group
+- issue
+- insight
+- creative_challenge
+- mandatories
+- graphic_asset_type
+- branding_guidance
+- key_points
+- sources_summary
+
+Rules:
+- Use Polish.
+- Use only the provided input.
+- Do not invent unsupported facts.
+- If something is missing, keep it concise and neutral.
+- "mandatories", "branding_guidance", and "key_points" must always be arrays of strings.
+- "executive_summary" should be short and useful for quick reading.
+- "sources_summary" should briefly describe what sources were used.
+
+Input brief:
+{{brief_json}}
+
+Input sources:
+{{sources_json}}
+
+Combined text:
+{{combined_text}}
