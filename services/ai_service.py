@@ -157,6 +157,18 @@ def _generate_flux_image_bytes(prompt: str, size: str = "1024x1024", negative_pr
     return _extract_bytes_from_image_response(response_payload)
 
 
+def strip_code_fences(text: str) -> str:
+    """Remove markdown code fences (```json ... ``` or ``` ... ```) from an LLM response."""
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned.removeprefix("```json").strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.removeprefix("```").strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned.removesuffix("```").strip()
+    return cleaned
+
+
 def generate_image_bytes(prompt: str, size: str = "1024x1024", negative_prompt: str | None = None) -> bytes:
     if os.getenv("FLUX_API_ENDPOINT"):
         return _generate_flux_image_bytes(prompt=prompt, size=size, negative_prompt=negative_prompt)

@@ -1,6 +1,6 @@
 import json
 from file_parser import BriefInputParser
-from services.ai_service import extract_brief_from_text
+from services.ai_service import extract_brief_from_text, strip_code_fences
 from services.missing_info_detector import detect_missing_fields
 
 def analyze_inputs(raw_texts=None, file_paths=None):
@@ -19,16 +19,7 @@ def analyze_inputs(raw_texts=None, file_paths=None):
         raise ValueError("Brak tekstu wejściowego po parsowaniu.")
 
     raw_ai_response = extract_brief_from_text(combined_text)
-    cleaned_response = raw_ai_response.strip()
-
-    if cleaned_response.startswith("```json"):
-        cleaned_response = cleaned_response.removeprefix("```json").strip()
-
-    if cleaned_response.startswith("```"):
-        cleaned_response = cleaned_response.removeprefix("```").strip()
-
-    if cleaned_response.endswith("```"):
-        cleaned_response = cleaned_response.removesuffix("```").strip()
+    cleaned_response = strip_code_fences(raw_ai_response)
 
     try:
         brief_json = json.loads(cleaned_response)

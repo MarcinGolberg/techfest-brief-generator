@@ -1,0 +1,78 @@
+/* ── Hero ─────────────────────────────────────────── */
+.hero {
+  padding: 96px 48px 72px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Entrance animations */
+.fade-up {
+  opacity: 0;
+  transform: translateY(28px);
+  animation: fadeUp 0.7s var(--ease-out) forwards;
+}
+.fade-up:nth-child(1) { animation-delay: 0.05s; }
+.fade-up:nth-child(2) { animation-delay: 0.18s; }
+.fade-up:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--purple);
+  margin-bottom: 20px;
+}
+
+.eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--purple);
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--white);
+  margin-bottom: 24px;
+}
+
+.hero h1 .word-accent {
+  color: var(--purple);
+  position: relative;
+  display: inline-block;
+}
+
+/* Animated underline on headline accent */
+.hero h1 .word-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; left: 0;
+  width: 100%; height: 2px;
+  background: var(--purple);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: lineReveal 0.6s 0.9s var(--ease-out) forwards;
+}
+
+@keyframes lineReveal { to { transform: scaleX(1); } }
+
+.hero p {
+  font-size: 1.05rem;
+  color: var(--gray-dark);
+  line-height: 1.75;
+  max-width: 520px;
+  margin-bottom: 40px;
+}

@@ -186,22 +186,6 @@ def chat_answer():
             else:
                 brief[field] = raw_value.strip() if isinstance(raw_value, str) else str(raw_value)
 
-            missing_fields = detect_missing_fields(brief)
-
-            return Response(
-                json.dumps({
-                    "status": "accepted",
-                    "response": result.get("response", ""),
-                    "payload": {
-                        "brief": brief,
-                        "sources": sources,
-                        "combined_text": combined_text,
-                        "missing_fields": missing_fields,
-                    },
-                }, ensure_ascii=False),
-                mimetype="application/json; charset=utf-8",
-            )
-
         return Response(
             json.dumps({
                 "status": status,

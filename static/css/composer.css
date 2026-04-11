@@ -1,0 +1,136 @@
+/* ── Composer Card ────────────────────────────────── */
+.composer {
+  background: var(--white);
+  border: 1px solid var(--gray-mid);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.composer:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(161, 0, 255, 0.12);
+}
+
+.composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  resize: vertical;
+  border: none;
+  outline: none;
+  padding: 24px;
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--black);
+  background: transparent;
+}
+
+.composer textarea::placeholder { color: var(--gray-mid); }
+
+/* ── Drop Zone ────────────────────────────────────── */
+.drop-zone {
+  margin: 0 24px;
+  padding: 20px;
+  border: 1px dashed var(--gray-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--gray-dark);
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  cursor: default;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--purple);
+  background: rgba(161, 0, 255, 0.04);
+  color: var(--purple);
+}
+
+.drop-zone svg { flex-shrink: 0; }
+
+/* ── Char Counter ─────────────────────────────────── */
+.composer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6px 24px 0;
+}
+
+.char-count {
+  font-size: 0.72rem;
+  color: var(--gray-dark);
+  letter-spacing: 0.04em;
+  transition: color 0.2s;
+}
+
+.char-count.warn { color: #f59e0b; }
+.char-count.limit { color: #ef4444; }
+
+/* ── Toolbar ──────────────────────────────────────── */
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid var(--gray-light);
+  background: var(--gray-light);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* ── Buttons ──────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+/* Ripple layer */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  transform: translateX(-100%);
+  transition: transform 0.3s var(--ease-out);
+}
+.btn:not(:disabled):hover::before { transform: translateX(0); }
+
+/* Ghost (upload) */
+.btn-ghost {
+  background: transparent;
+  border-color: var(--black);
+  color: var(--black);
+}
+.btn-ghost:not(:disabled):hover {
+  background: var(--black);
+  color: var(--white);
+}
+
+/* Solid purple (submit) */
+.btn-primary {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: var(--white);
+}
+.btn-primary:not(:disabled):hover {
+  background: var(--purple-dim);
+  border-color: var(--purple-dim);
+}
+
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:not(:disabled) { cursor: pointer; }

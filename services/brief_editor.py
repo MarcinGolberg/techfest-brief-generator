@@ -1,6 +1,6 @@
-import os
 import json
-from services.ai_service import get_azure_client
+import os
+from services.ai_service import get_azure_client, _get_deployment
 
 EDIT_SYSTEM_PROMPT = """\
 Jesteś asystentem pomagającym edytować brief marketingowy na podstawie poleceń użytkownika w języku polskim.
@@ -43,8 +43,8 @@ def edit_brief_with_prompt(brief: dict, edit_prompt: str) -> dict:
     Process a natural-language edit prompt against the current brief.
     Returns { updated_fields: {field: value, ...}, response: str }
     """
-    client     = get_azure_client()
-    deployment = os.getenv("AZURE_LLM_DEPLOYMENT")
+    client = get_azure_client()
+    deployment = _get_deployment()
 
     context = (
         f"AKTUALNY BRIEF:\n{json.dumps(brief, ensure_ascii=False, indent=2)}\n\n"
@@ -55,7 +55,7 @@ def edit_brief_with_prompt(brief: dict, edit_prompt: str) -> dict:
         model=deployment,
         messages=[
             {"role": "system", "content": EDIT_SYSTEM_PROMPT},
-            {"role": "user",   "content": context},
+            {"role": "user", "content": context},
         ],
         temperature=0.3,
         timeout=30,

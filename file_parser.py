@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class BriefInputParser:
-    def __init__(self):
-        pass
-
     def _extract_pdf(self, file_path):
         text = ""
         try:
@@ -132,7 +129,7 @@ class BriefInputParser:
                 continue
 
             filename = os.path.basename(file_path)
-            ext = filename.lower().split(".")[-1]
+            ext = os.path.splitext(filename)[1].lower().lstrip(".")
             content = ""
 
             if ext == "pdf":

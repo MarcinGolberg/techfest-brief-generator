@@ -1,6 +1,6 @@
 import json
 import os
-from services.ai_service import extract_structured_text
+from services.ai_service import extract_structured_text, strip_code_fences
 
 _PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
 
@@ -16,16 +16,7 @@ def build_document_brief(brief: dict, sources: list, combined_text: str) -> dict
     )
 
     raw_response = extract_structured_text(prompt)
-    cleaned = raw_response.strip()
-
-    if cleaned.startswith("```json"):
-        cleaned = cleaned.removeprefix("```json").strip()
-
-    if cleaned.startswith("```"):
-        cleaned = cleaned.removeprefix("```").strip()
-
-    if cleaned.endswith("```"):
-        cleaned = cleaned.removesuffix("```").strip()
+    cleaned = strip_code_fences(raw_response)
 
     try:
         return json.loads(cleaned)
