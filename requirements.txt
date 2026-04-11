@@ -1,2 +1,10 @@
 flask
+openai
+anthropic
+python-dotenv
+pypdf
+python-docx
+python-pptx
+openpyxl
+reportlab
 gunicorn
