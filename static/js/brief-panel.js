@@ -137,17 +137,6 @@ function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
         badge.sample_participant?.company,
         badge.sample_participant?.position,
       ].filter(Boolean).join(' / ') || '—')}</div>
-      <div class="badge-plan-copy"><strong>Brandbook:</strong> ${escapeHtml(
-        badge.badgeLayoutData?.branding?.brandbookSource || badge.brandbook_source || badgeGeneration?.summary?.brandbook_source || 'Brand guidelines'
-      )}</div>
-      <div class="badge-plan-prompt"><strong>Background prompt:</strong> ${escapeHtml(badge.backgroundPrompt || '—')}</div>
-      <div class="badge-plan-prompt"><strong>Negative prompt:</strong> ${escapeHtml(badge.negativePrompt || '—')}</div>
-      <div class="badge-plan-prompt"><strong>Deterministic layout:</strong> ${escapeHtml([
-        badge.badgeLayoutData?.conferenceName,
-        badge.badgeLayoutData?.participant?.participantType,
-        badge.badgeLayoutData?.participant?.firstName,
-        badge.badgeLayoutData?.participant?.lastName,
-      ].filter(Boolean).join(' / ') || '—')}</div>
       ${badge.preview_url
         ? `<div class="badge-plan-image-wrap"><img class="badge-plan-image" src="${badge.preview_url}" alt="${escapeHtml(badge.name || 'Badge preview')}"></div>`
         : ''}
