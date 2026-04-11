@@ -92,6 +92,98 @@ function renderSidebar() {
   renderBriefPanel();
 }
 
+function addHistoryEntry(entry) {
+  briefHistory.push({ ...entry, timestamp: new Date() });
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('brief-history-list');
+  if (!list) return;
+
+  if (briefHistory.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+
+  const entries = [...briefHistory].reverse();
+  list.innerHTML = entries.map((entry, revIdx) => {
+    const origIdx  = briefHistory.length - 1 - revIdx;
+    const isNewest = revIdx === 0;
+    const timeStr  = entry.timestamp.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    const isFound    = entry.type === 'fields_found';
+    const isReverted = entry.type === 'reverted';
+    const icon = isFound ? '✦' : isReverted ? '↩' : '✎';
+    const cls  = isFound ? 'history-item-found' : isReverted ? 'history-item-reverted' : 'history-item-change';
+    const raw  = entry.fieldValue != null ? String(entry.fieldValue) : '';
+    const valueHtml = raw
+      ? `<div class="history-value">${escapeHtml(raw.length > 58 ? raw.slice(0, 58) + '…' : raw)}</div>`
+      : '';
+    const isClickable = !isNewest && !!entry.briefSnapshot;
+    const clickAttr   = isClickable ? ` onclick="revertToBriefSnapshot(${origIdx})" title="Kliknij, aby przywrócić tę wersję"` : '';
+    const extraCls    = isClickable ? ' history-item-clickable' : (isNewest ? ' history-item-current' : '');
+
+    return `<div class="history-item ${cls}${isNewest ? ' history-item-new' : ''}${extraCls}"${clickAttr} data-history-idx="${revIdx}">
+      <span class="history-icon">${icon}</span>
+      <div class="history-content">
+        <div class="history-title">${escapeHtml(entry.title)}</div>
+        ${valueHtml}
+        <div class="history-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const newest = list.querySelector('.history-item-new');
+  if (newest) {
+    setTimeout(() => newest.classList.remove('history-item-new'), 700);
+  }
+}
+
+function revertToBriefSnapshot(origIdx) {
+  const entry = briefHistory[origIdx];
+  if (!entry?.briefSnapshot) return;
+
+  const prevBrief = currentBrief;
+  resetGeneratedArtifacts();
+  currentBrief   = { ...entry.briefSnapshot };
+  currentMissing = entry.missingSnapshot ? entry.missingSnapshot.map(m => ({ ...m })) : [];
+
+  addHistoryEntry({
+    type: 'reverted',
+    title: `Przywrócono: ${entry.title}`,
+    briefSnapshot: { ...currentBrief },
+    missingSnapshot: currentMissing.map(m => ({ ...m })),
+  });
+
+  renderSidebar();
+  renderBriefPanelHeader();
+
+  BRIEF_SCHEMA.forEach(s => {
+    if (JSON.stringify(currentBrief[s.field]) !== JSON.stringify(prevBrief?.[s.field])) {
+      setTimeout(() => flashBriefField(s.field), 150);
+    }
+  });
+
+  // Announce the revert in the chat
+  addAIMessage(`Przywróciłam brief do wersji: <em>${escapeHtml(entry.title)}</em>.`);
+
+  if (currentMissing.length > 0) {
+    // Switch to filling mode and ask about the first missing field
+    chatMode = 'filling';
+    const inputBar  = document.getElementById('chat-input-bar');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn   = document.getElementById('btn-chat-send');
+    inputBar.classList.remove('edit-mode');
+    chatInput.placeholder = 'Wpisz odpowiedź…';
+    chatInput.disabled    = false;
+    sendBtn.disabled      = false;
+    const modeBadge = document.getElementById('edit-mode-badge');
+    if (modeBadge) modeBadge.remove();
+    renderBriefPanelHeader();
+    setTimeout(() => askNext(), 900);
+  }
+}
+
 function updateInputPlaceholder(isList) {
   document.getElementById('chat-input').placeholder = isList
     ? 'Np. Instagram, LinkedIn, e-mail…'
