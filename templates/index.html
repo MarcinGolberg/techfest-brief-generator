@@ -1118,9 +1118,10 @@
 
     let currentBrief = null;
     let currentMissing = [];
+    let fieldConversation = [];   // [{role, content}] for the current field only
 
     function startChatMode(data) {
-      currentBrief  = data.brief;
+      currentBrief   = data.brief;
       currentMissing = data.missing_fields || [];
 
       const overlay = document.getElementById('chat-overlay');
@@ -1134,7 +1135,7 @@
       renderSidebar();
 
       addAIMessage(
-        'Cześć! Przeanalizowałem przesłane materiały i przygotowałem wstępny brief. ' +
+        'Cześć! Przeanalizowałam przesłane materiały i przygotowałam wstępny brief. ' +
         'Potrzebuję jeszcze kilku uzupełnień — zadam Ci kilka krótkich pytań.'
       );
 
@@ -1148,17 +1149,25 @@
       }, 700);
     }
 
-    function askNext(prefix) {
+    function askNext(prefixMsg) {
       if (currentMissing.length === 0) {
         addAIMessage('Dziękuję za wszystkie odpowiedzi!');
         showComplete();
         return;
       }
-      const field = currentMissing[0];
+      fieldConversation = [];   // reset history for new field
+
+      const field  = currentMissing[0];
       const isList = BRIEF_SCHEMA.find(s => s.field === field.field)?.type === 'list';
-      const hint   = isList ? ' <span style="font-size:0.78rem;color:#666">(możesz podać kilka, oddzielonych przecinkami)</span>' : '';
-      const msg    = (prefix ? prefix + ' ' : '') + field.question + hint;
-      addAIMessage(msg, true);
+      const hint   = isList
+        ? ' <span style="font-size:0.78rem;color:#555">(możesz podać kilka, oddzielonych przecinkami)</span>'
+        : '';
+      const questionText = (prefixMsg ? prefixMsg + ' ' : '') + field.question + hint;
+
+      // Track this question in conversation history
+      fieldConversation.push({ role: 'assistant', content: field.question });
+
+      addAIMessage(questionText, true);
       updateInputPlaceholder(isList);
     }
 
@@ -1188,6 +1197,7 @@
     }
 
     function addAIMessage(html, focusInput) {
+      if (html == null) return;   // guard against undefined/null
       const msgs = document.getElementById('chat-messages');
 
       // typing indicator
@@ -1235,29 +1245,57 @@
 
       addUserMessage(answer);
 
+      // Append this user turn to the field-level conversation history
+      fieldConversation.push({ role: 'user', content: answer });
+
       try {
-        const res  = await fetch('/update_brief', {
+        const res  = await fetch('/chat_answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ brief: currentBrief, field: field.field, answer })
+          body: JSON.stringify({
+            brief: currentBrief,
+            field: field.field,
+            conversation_history: fieldConversation,
+          })
         });
         const data = await res.json();
-        currentBrief  = data.brief;
-        currentMissing = data.missing_fields;
-        renderSidebar();
 
-        const ack = ACK_PHRASES[Math.floor(Math.random() * ACK_PHRASES.length)];
-        setTimeout(() => {
-          if (currentMissing.length > 0) {
-            askNext(ack);
-          } else {
-            addAIMessage(ack + ' Brief jest teraz kompletny!');
-            setTimeout(showComplete, 700);
-          }
-        }, 200);
+        if (!res.ok || data.error) {
+          // Roll back the user turn we already pushed so retry works cleanly
+          fieldConversation.pop();
+          const detail = data.error ? ` (${data.error})` : '';
+          addAIMessage(`Ups, coś poszło nie tak po mojej stronie${detail}. Spróbuj jeszcze raz!`, true);
+          return;
+        }
+
+        const status = data.status;
+
+        if (status === 'accepted') {
+          currentBrief   = data.brief;
+          currentMissing = data.missing_fields;
+          renderSidebar();
+
+          setTimeout(() => {
+            if (currentMissing.length > 0) {
+              // Show AI acceptance message, then ask next field
+              addAIMessage(data.response, false);
+              setTimeout(() => askNext(), 900);
+            } else {
+              addAIMessage(data.response);
+              setTimeout(showComplete, 800);
+            }
+          }, 200);
+
+        } else {
+          // needs_more or invalid — stay on current field, record AI follow-up
+          fieldConversation.push({ role: 'assistant', content: data.response });
+          setTimeout(() => {
+            addAIMessage(data.response, true);
+          }, 200);
+        }
 
       } catch (err) {
-        addAIMessage('Wystąpił błąd. Spróbuj ponownie.');
+        addAIMessage('Wystąpił błąd połączenia. Spróbuj ponownie.');
       } finally {
         document.getElementById('btn-chat-send').disabled = false;
       }
