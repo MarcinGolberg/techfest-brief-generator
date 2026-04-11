@@ -29,7 +29,7 @@ BRAND_GUIDELINES = {
 }
 
 LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo.png")
-BADGE_SIZE = (900, 1400)
+BADGE_SIZE = (900, 1200)
 SAFE_MARGIN = 56
 ROLE_STRIP_WIDTH = 42
 HEADER_HEIGHT = 240
@@ -294,11 +294,11 @@ def _role_bar_style(role_id: str) -> Dict[str, str]:
             "edge": "#000000",
         },
         "partner": {
-            "bar_fill": "#D9D9D9",
+            "bar_fill": "#BAB8B8",
             "bar_text": "#111111",
-            "bar_border": "#D9D9D9",
-            "bar_accent": "#D9D9D9",
-            "edge": "#D9D9D9",
+            "bar_border": "#BAB8B8",
+            "bar_accent": "#BAB8B8",
+            "edge": "#BAB8B8",
         },
         "speaker": {
             "bar_fill": "#FFFFFF",
@@ -325,6 +325,11 @@ def _open_generated_background(image_bytes: bytes) -> Image.Image:
 
 def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     base = _open_generated_background(image_bytes).filter(ImageFilter.GaussianBlur(radius=8))
+    base = Image.blend(
+        Image.new("RGB", BADGE_SIZE, _hex_to_rgb("#FCFCFA")),
+        base,
+        0.3,
+    )
     base = ImageEnhance.Color(base).enhance(0.28)
     base = ImageEnhance.Contrast(base).enhance(0.90)
     base = ImageEnhance.Brightness(base).enhance(1.06)
@@ -379,13 +384,13 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     card_bottom = height
     card_radius = 0
     edge_width = 28
-    draw.rounded_rectangle(
-        (card_left, card_top, card_right, card_bottom),
-        radius=card_radius,
-        fill=_hex_to_rgb("#FEFEFD"),
-        outline=_hex_to_rgb("#ECECE8"),
-        width=1,
-    )
+    # draw.rounded_rectangle(
+    #     (card_left, card_top, card_right, card_bottom),
+    #     radius=card_radius,
+    #     fill=_hex_to_rgb("#FEFEFD"),
+    #     outline=_hex_to_rgb("#ECECE8"),
+    #     width=1,
+    # )
 
     edge_color = _hex_to_rgb(role_style["edge"])
     draw.rectangle(
@@ -393,12 +398,12 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         fill=edge_color,
     )
 
-    title_font = _load_font(38, bold=False)
-    role_font = _load_font(42, bold=True)
-    company_font = _load_font(32, bold=False)
-    position_font = _load_font(26, bold=False)
+    title_font = _load_font(42, bold=False)
+    role_font = _load_font(48, bold=True)
+    company_font = _load_font(48, bold=True)
+    position_font = _load_font(42, bold=False)
     secondary_font = _load_font(30, bold=False)
-    logo = _fit_logo(max_width=320, max_height=90)
+    logo = _fit_logo(max_width=480, max_height=180)
 
     content_left = card_left + 72
     content_right = card_right - edge_width - 64
@@ -409,8 +414,16 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     title_lines = _wrap_text(_truncate(conference_name, 80), draw, title_font, content_width)
     current_y = card_top + 86
     for line in title_lines[:2]:
-        draw.text((content_left, current_y), line, font=title_font, fill=conference_fill)
-        current_y = draw.textbbox((content_left, current_y), line, font=title_font)[3] + 4
+        bbox = draw.textbbox((0, 0), line, font=title_font)
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
+        draw.text(
+            (center_x - (line_width // 2), current_y),
+            line,
+            font=title_font,
+            fill=conference_fill,
+        )
+        current_y += line_height + 4
 
     name_top = card_top + 270
     name_font, name_lines, _ = _fit_multiline_text(
@@ -474,9 +487,9 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         )
 
     role_bar_height = 112
-    role_bar_left = content_left
-    role_bar_right = content_right
-    role_bar_top = card_bottom - 286
+    role_bar_left = card_left
+    role_bar_right = card_right - edge_width
+    role_bar_top = card_bottom - 380
     role_bar_bottom = role_bar_top + role_bar_height
     draw.rectangle(
         (role_bar_left, role_bar_top, role_bar_right, role_bar_bottom),
@@ -504,7 +517,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     )
 
     logo_x = center_x - (logo.width // 2)
-    logo_y = card_bottom - 132
+    logo_y = role_bar_bottom + (card_bottom - role_bar_bottom -logo.height) // 2
     canvas.paste(logo, (logo_x, logo_y), logo)
 
     output = io.BytesIO()
