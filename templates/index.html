@@ -574,14 +574,12 @@
   <!-- ── Hero ────────────────────────────────────────── -->
   <main>
     <section class="hero">
-
       <div class="fade-up">
         <p class="eyebrow">AI &amp; Intelligent Solutions</p>
         <h1>Let&apos;s solve<br>what&apos;s <span class="word-accent">next &gt;</span></h1>
         <p>Describe your challenge below. Attach supporting documents for context, then submit — and we&apos;ll get to work.</p>
       </div>
 
-      <!-- Composer -->
       <div class="composer fade-up">
         <textarea
           id="msg"
@@ -590,7 +588,6 @@
           aria-label="Message input"
         ></textarea>
 
-        <!-- Drop zone -->
         <div class="drop-zone" id="drop-zone" aria-label="Drag and drop area">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="square">
@@ -600,14 +597,12 @@
           Drag &amp; drop files here, or use the button below
         </div>
 
-        <!-- Char counter -->
         <div class="composer-meta">
           <span class="char-count" id="char-count">0 / 2000</span>
         </div>
 
-        <!-- Toolbar -->
         <div class="composer-toolbar">
-          <button class="btn btn-ghost" id="btn-upload" aria-label="Upload documents">
+          <button class="btn btn-ghost" id="btn-upload">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="square">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19
@@ -615,12 +610,11 @@
             </svg>
             Upload Documents
           </button>
-          <button class="btn btn-primary" id="btn-submit" aria-label="Submit">
+          <button class="btn btn-primary" id="btn-submit">
             Submit &gt;
           </button>
         </div>
       </div>
-
     </section>
   </main>
 
@@ -703,10 +697,10 @@
   </footer>
 
   <!-- ── Toast ─────────────────────────────────────────── -->
-  <div id="toast" role="status" aria-live="polite">
+   <output id="toast" aria-live="polite">
     <div class="toast-dot"></div>
     <span id="toast-msg">Coming soon</span>
-  </div>
+  </output>
 
   <!-- ── Scripts ───────────────────────────────────────── -->
   <script>
