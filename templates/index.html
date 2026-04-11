@@ -812,6 +812,154 @@
       align-items: center;
     }
 
+    /* ── Brief panel (right half) ────────────────────── */
+    .brief-panel {
+      display: none;
+      width: 0;
+      flex-direction: column;
+      background: #050505;
+      border-left: 1px solid #1a1a1a;
+      overflow: hidden;
+      transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
+      flex-shrink: 0;
+    }
+
+    .brief-panel.visible {
+      display: flex;
+      width: 50%;
+    }
+
+    /* When brief panel is visible, constrain chat-main to 50% of remaining */
+    .chat-body.split .chat-main {
+      flex: 0 0 auto;
+      width: calc(50% - 240px);
+      min-width: 0;
+    }
+
+    .brief-panel-header {
+      height: 48px;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .brief-panel-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+    }
+
+    .brief-panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 0.75rem;
+    }
+
+    .brief-panel-status {
+      padding: 10px 24px;
+      font-size: 0.8rem;
+      color: var(--gray-dark);
+      border-bottom: 1px solid #111;
+      flex-shrink: 0;
+    }
+
+    .brief-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Individual brief field row in the panel */
+    .brief-field {
+      border-left: 2px solid #1a1a1a;
+      padding: 10px 14px;
+      border-radius: 0 2px 2px 0;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .brief-field-empty {
+      border-left-color: #1a1a1a;
+      opacity: 0.5;
+    }
+
+    .brief-field-filled {
+      border-left-color: #4ade80;
+    }
+
+    .brief-field-current {
+      border-left-color: var(--purple);
+      background: rgba(161,0,255,0.05);
+    }
+
+    .brief-field-updated {
+      animation: fieldFlash 1.2s ease-out forwards;
+    }
+
+    @keyframes fieldFlash {
+      0%   { background: rgba(161,0,255,0.2); border-left-color: var(--purple); }
+      100% { background: transparent; }
+    }
+
+    .brief-field-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      margin-bottom: 5px;
+    }
+
+    .brief-field-value {
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--white);
+    }
+
+    .brief-field-empty .brief-field-value {
+      color: #333;
+    }
+
+    .brief-tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid #2a2a2a;
+      padding: 2px 8px;
+      font-size: 0.76rem;
+      margin: 2px 3px 2px 0;
+    }
+
+    /* Edit mode — input bar visual cue */
+    .chat-input-bar.edit-mode {
+      border-top-color: rgba(161,0,255,0.35);
+    }
+
+    .chat-input-bar.edit-mode textarea {
+      border-color: rgba(161,0,255,0.25);
+    }
+
+    .edit-mode-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--purple);
+      padding: 0 40px 6px;
+      background: #080808;
+    }
+
     /* Ghost button variant for dark surfaces */
     .btn-subtle {
       background: transparent;
@@ -822,6 +970,96 @@
       background: #1e1e1e;
       border-color: var(--white);
       color: var(--white);
+    }
+
+    /* ── Document preview inside brief panel ─────────── */
+    .doc-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 100%;
+    }
+
+    /* PDF iframe strip */
+    .doc-pdf-wrap {
+      width: 100%;
+      height: 340px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #1a1a1a;
+      background: #000;
+      margin-bottom: 24px;
+    }
+
+    .doc-pdf-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Document text area */
+    .doc-inner {
+      padding: 0 4px 32px;
+    }
+
+    .doc-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--purple);
+      margin-bottom: 24px;
+      line-height: 1.3;
+    }
+
+    .doc-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #111;
+    }
+
+    .doc-section:last-child {
+      border-bottom: none;
+    }
+
+    .doc-section-title {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      margin-bottom: 8px;
+    }
+
+    .doc-body {
+      font-size: 0.83rem;
+      line-height: 1.65;
+      color: #d4d4d4;
+      margin: 0;
+    }
+
+    .doc-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .doc-list-item {
+      font-size: 0.83rem;
+      line-height: 1.55;
+      color: #d4d4d4;
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .doc-list-item::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--purple);
+      font-weight: 700;
     }
 
     /* ── Responsive ───────────────────────────────────── */
@@ -1011,7 +1249,7 @@
         <div class="logo">accent<em>ure</em></div>
         <span class="chat-product-tag" id="chat-product-label">Brief</span>
       </div>
-      <button class="btn btn-ghost" id="btn-chat-close" style="font-size:0.75rem; padding:8px 18px;">
+      <button class="btn btn-primary" id="btn-chat-close" style="font-size:0.75rem; padding:8px 18px;">
         ✕ Wróć
       </button>
     </div>
@@ -1032,6 +1270,18 @@
           ></textarea>
           <button class="btn btn-primary" id="btn-chat-send">Wyślij &gt;</button>
         </div>
+      </div>
+
+      <!-- Live brief panel — shown after filling starts -->
+      <div class="brief-panel" id="brief-panel">
+        <div class="brief-panel-header">
+          <span class="brief-panel-title">Podgląd briefu</span>
+          <div class="brief-panel-actions" id="brief-panel-actions" style="display:none;">
+            <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
+          </div>
+        </div>
+        <div id="brief-panel-status" class="brief-panel-status" style="display:none;"></div>
+        <div class="brief-panel-content" id="brief-panel-content"></div>
       </div>
     </div>
 
@@ -1208,12 +1458,14 @@
     let currentCombinedText = '';
     let fieldConversation = [];   // [{role, content}] for the current field only
     let invalidStreak = 0;        // consecutive "invalid" responses for the current field
+    let chatMode = 'filling';     // 'filling' | 'editing'
 
     function startChatMode(data) {
       currentBrief   = data.brief;
       currentMissing = data.missing_fields || [];
       currentSources = data.sources || [];
       currentCombinedText = data.combined_text || '';
+      chatMode = 'filling';
 
       const overlay = document.getElementById('chat-overlay');
       const label   = document.getElementById('chat-product-label');
@@ -1223,7 +1475,10 @@
       document.body.style.overflow = 'hidden';
 
       document.getElementById('chat-messages').innerHTML = '';
+      document.getElementById('chat-input-bar').style.display = 'flex';
       renderSidebar();
+      showBriefPanel();
+      renderBriefPanel();
 
       addAIMessage(
         'Cześć! Przeanalizowałam przesłane materiały i przygotowałam wstępny brief. ' +
@@ -1238,6 +1493,56 @@
           showComplete();
         }
       }, 700);
+    }
+
+    function showBriefPanel() {
+      const panel   = document.getElementById('brief-panel');
+      const body    = document.querySelector('.chat-body');
+      panel.classList.add('visible');
+      body.classList.add('split');
+    }
+
+    function renderBriefPanel() {
+      const content = document.getElementById('brief-panel-content');
+      const missing = new Set(currentMissing.map(f => f.field));
+      const current = currentMissing[0]?.field;
+
+      content.innerHTML = BRIEF_SCHEMA.map(({ field, label, type }) => {
+        const value   = currentBrief?.[field];
+        const isList  = type === 'list';
+        let displayValue = '—';
+        let hasValue = false;
+
+        if (value) {
+          if (isList && Array.isArray(value) && value.length > 0) {
+            displayValue = value.map(v => `<span class="brief-tag">${escapeHtml(String(v))}</span>`).join('');
+            hasValue = true;
+          } else if (!isList && typeof value === 'string' && value.trim()) {
+            displayValue = escapeHtml(value.trim());
+            hasValue = true;
+          }
+        }
+
+        const isCurrent = field === current;
+        let cls = 'brief-field-empty';
+        if (isCurrent)    cls = 'brief-field-current';
+        else if (hasValue) cls = 'brief-field-filled';
+
+        return `<div class="brief-field ${cls}" data-field="${field}">
+          <div class="brief-field-label">${label}</div>
+          <div class="brief-field-value">${displayValue}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function flashBriefField(fieldName) {
+      const el = document.querySelector(`[data-field="${fieldName}"]`);
+      if (!el) return;
+      el.classList.remove('brief-field-updated');
+      // Force reflow so the animation restarts
+      void el.offsetWidth;
+      el.classList.add('brief-field-updated');
+      setTimeout(() => el.classList.remove('brief-field-updated'), 1300);
     }
 
     function askNext(prefixMsg) {
@@ -1282,6 +1587,7 @@
           <span class="progress-icon">${icon}</span><span>${label}</span>
         </div>`;
       }).join('');
+      renderBriefPanel();
     }
 
     function escapeHtml(s) {
@@ -1326,6 +1632,11 @@
     }
 
     async function sendChatAnswer() {
+      if (chatMode === 'editing') {
+        await sendEditPrompt();
+        return;
+      }
+
       const input  = document.getElementById('chat-input');
       const answer = input.value.trim();
       if (!answer || currentMissing.length === 0) return;
@@ -1366,11 +1677,13 @@
 
         if (status === 'accepted') {
           const payload  = data.payload || {};
+          const justFilled = field.field;
           currentBrief   = payload.brief   ?? currentBrief;
           currentMissing = payload.missing_fields ?? [];
           if (payload.sources)        currentSources      = payload.sources;
           if (payload.combined_text)  currentCombinedText = payload.combined_text;
           renderSidebar();
+          setTimeout(() => flashBriefField(justFilled), 150);
 
           setTimeout(() => {
             if (currentMissing.length > 0) {
@@ -1485,9 +1798,11 @@
           throw new Error(data.error || `HTTP ${res.status}`);
         }
 
+        const justFilled2 = fieldName;
         currentBrief   = data.brief;
         currentMissing = data.missing_fields;
         renderSidebar();
+        setTimeout(() => flashBriefField(justFilled2), 150);
 
         // Swap the card for a user bubble
         const userBubble = document.createElement('div');
@@ -1542,47 +1857,46 @@
     }
 
     function showComplete() {
-      document.getElementById('chat-input-bar').style.display = 'none';
-      const msgs = document.getElementById('chat-messages');
+      chatMode = 'editing';
 
-      const card = document.createElement('div');
-      card.className = 'brief-complete-card';
-      card.innerHTML = `
-        <h3>Brief kompletny ✓</h3>
-        <p>Przekazuję pełny zestaw danych (brief + sources + combined_text) do kolejnego etapu.</p>
+      // Switch the input bar to edit mode
+      const inputBar = document.getElementById('chat-input-bar');
+      const chatInput = document.getElementById('chat-input');
+      inputBar.classList.add('edit-mode');
+      chatInput.placeholder = 'Edytuj brief — np. "Zmień cel kampanii na budowanie świadomości marki"';
+      chatInput.disabled = false;
+      document.getElementById('btn-chat-send').disabled = false;
+      inputBar.style.display = 'flex';
 
-        <select id="final-format" class="manual-field" style="margin:10px 0;">
-          <option value="docx">DOCX</option>
-          <option value="pdf">PDF</option>
-        </select>
+      // Insert the edit-mode badge above the input bar
+      if (!document.getElementById('edit-mode-badge')) {
+        const badge = document.createElement('div');
+        badge.id = 'edit-mode-badge';
+        badge.className = 'edit-mode-badge';
+        badge.textContent = 'Tryb edycji — wpisz polecenie, aby zmienić dowolne pole briefu';
+        inputBar.parentNode.insertBefore(badge, inputBar);
+      }
 
-        <div id="final-status" style="margin:10px 0; color:#555;">Wybierz format i kliknij generowanie.</div>
+      // Reveal the generate controls in the brief panel header
+      document.getElementById('brief-panel-actions').style.display = 'flex';
 
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="finalizeBrief()">Generuj plik &gt;</button>
-          <button class="btn btn-ghost" onclick="closeChatOverlay()">Wróć</button>
-        </div>
-
-        <div id="final-actions" style="display:none; gap:8px; margin-top:12px;">
-          <a id="final-download" class="btn btn-primary" href="#" download>Pobierz plik &gt;</a>
-        </div>
-      `;
-
-      msgs.appendChild(card);
-      msgs.scrollTop = msgs.scrollHeight;
+      // Show completion notification in chat
+      addAIMessage(
+        'Brief jest kompletny! Możesz teraz edytować dowolne pole przez czat — ' +
+        'napisz np. <em>"Zmień grupę docelową na kobiety 25–40 lat"</em>. ' +
+        'Gdy wszystko gotowe, wygeneruj dokument przyciskiem w panelu po prawej.'
+      );
     }
 
     async function finalizeBrief() {
-      const statusEl = document.getElementById('final-status');
-      const actionsEl = document.getElementById('final-actions');
-      const linkEl = document.getElementById('final-download');
-      const formatEl = document.getElementById('final-format');
-
-      const selectedFormat = formatEl ? formatEl.value : 'docx';
+      const statusEl = document.getElementById('brief-panel-status');
 
       statusEl.textContent = 'Trwa generowanie dokumentu…';
-      statusEl.style.color = '#555';
-      actionsEl.style.display = 'none';
+      statusEl.style.color = 'var(--gray-dark)';
+      statusEl.style.display = 'block';
+
+      const genBtn = document.querySelector('#brief-panel-actions .btn-primary');
+      if (genBtn) genBtn.disabled = true;
 
       try {
         const res = await fetch('/finalize', {
@@ -1592,7 +1906,7 @@
             brief: currentBrief,
             sources: currentSources,
             combined_text: currentCombinedText,
-            format: selectedFormat
+            format: 'docx'
           })
         });
 
@@ -1600,28 +1914,221 @@
 
         if (!res.ok || data.error) {
           const detail = data.error ? ` (${data.error})` : '';
-          statusEl.textContent = `Nie udało się wygenerować dokumentu${detail}.`;
+          statusEl.textContent = `Błąd: Nie udało się wygenerować dokumentu${detail}.`;
           statusEl.style.color = '#c00';
           return;
         }
 
-        statusEl.textContent = `Dokument ${selectedFormat.toUpperCase()} gotowy — możesz go pobrać.`;
-        statusEl.style.color = '#222';
+        statusEl.style.display = 'none';
+        renderDocumentPreview(data.document_brief, data.download_url);
 
-        if (data.download_url) {
-          linkEl.href = data.download_url;
-          linkEl.setAttribute('download', '');
-          actionsEl.style.display = 'flex';
-        }
       } catch (err) {
         statusEl.textContent = `Błąd połączenia: ${err.message}`;
         statusEl.style.color = '#c00';
+      } finally {
+        if (genBtn) genBtn.disabled = false;
+      }
+    }
+
+    function renderDocumentPreview(docBrief, docxDownloadUrl) {
+      const panel   = document.getElementById('brief-panel');
+      const content = document.getElementById('brief-panel-content');
+      const header  = document.querySelector('.brief-panel-header');
+
+      // Swap header to preview mode with both download options
+      header.innerHTML = `
+        <span class="brief-panel-title">Podgląd dokumentu</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+          <button class="btn btn-primary btn-sm" onclick="returnToBriefView()">← Edytuj</button>
+          ${docxDownloadUrl
+            ? `<a class="btn btn-primary btn-sm" href="${docxDownloadUrl}" download>↓ DOCX</a>`
+            : ''}
+          <button class="btn btn-primary btn-sm" id="btn-pdf-download" onclick="downloadAsPdf(this)">↓ PDF</button>
+        </div>`;
+
+      // Build the HTML document body
+      const safe     = s => s ? escapeHtml(String(s)) : '';
+      const safeList = v => Array.isArray(v) ? v : [];
+      const listHtml = items => items.length
+        ? items.map(i => `<li class="doc-list-item">${safe(i)}</li>`).join('')
+        : '<li class="doc-list-item" style="color:#555">—</li>';
+
+      const sections = [
+        { title: 'EXECUTIVE SUMMARY / STRESZCZENIE', value: docBrief.executive_summary, type: 'text' },
+        { title: 'BACKGROUND / KONTEKST', value: docBrief.background, type: 'text' },
+        { title: 'OBJECTIVE / CEL', value: docBrief.objective, type: 'text' },
+        { title: 'TARGET GROUP / GRUPA DOCELOWA', value: docBrief.target_group, type: 'text' },
+        { title: 'ISSUE / PROBLEM', value: docBrief.issue, type: 'text' },
+        { title: 'INSIGHT / OBSERWACJA', value: docBrief.insight, type: 'text' },
+        { title: 'CREATIVE CHALLENGE / WYZWANIE KREATYWNE', value: docBrief.creative_challenge, type: 'text' },
+        { title: 'MANDATORIES / WYMAGANIA', value: docBrief.mandatories, type: 'list' },
+        { title: 'GRAPHIC ASSET TYPE', value: docBrief.graphic_asset_type, type: 'text' },
+        { title: 'BRANDING GUIDANCE', value: docBrief.branding_guidance, type: 'list' },
+        { title: 'KEY POINTS', value: docBrief.key_points, type: 'list' },
+        { title: 'ŹRÓDŁA', value: docBrief.sources_summary, type: 'text' },
+      ].filter(s => s.value && (Array.isArray(s.value) ? s.value.length : String(s.value).trim()));
+
+      const sectionsHtml = sections.map(s => `
+        <div class="doc-section">
+          <div class="doc-section-title">${s.title}</div>
+          ${s.type === 'list'
+            ? `<ul class="doc-list">${listHtml(safeList(s.value))}</ul>`
+            : `<p class="doc-body">${safe(s.value)}</p>`}
+        </div>`).join('');
+
+      content.innerHTML = `
+        <div class="doc-preview">
+          <div class="doc-inner">
+            <div class="doc-title">${safe(docBrief.title || 'BRIEF NA KAMPANIĘ')}</div>
+            ${sectionsHtml}
+          </div>
+        </div>`;
+
+      content.scrollTop = 0;
+      panel.scrollTop   = 0;
+    }
+
+    async function downloadAsPdf(btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Generuję…';
+
+      try {
+        const res = await fetch('/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brief: currentBrief,
+            sources: currentSources,
+            combined_text: currentCombinedText,
+            format: 'pdf'
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          btn.textContent = 'Błąd';
+          setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
+          return;
+        }
+
+        // Trigger browser download
+        const a = document.createElement('a');
+        a.href = data.download_url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        btn.textContent = 'Pobrano ✓';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
+
+      } catch (err) {
+        btn.textContent = 'Błąd';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
+      }
+    }
+
+    function returnToBriefView() {
+      const header = document.querySelector('.brief-panel-header');
+      header.innerHTML = `
+        <span class="brief-panel-title">Podgląd briefu</span>
+        <div class="brief-panel-actions" id="brief-panel-actions" style="display:flex;">
+          <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
+        </div>`;
+      renderBriefPanel();
+    }
+
+    async function sendEditPrompt() {
+      const input  = document.getElementById('chat-input');
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      input.value = '';
+      input.style.height = '';
+      document.getElementById('btn-chat-send').disabled = true;
+
+      addUserMessage(prompt);
+
+      try {
+        const res  = await fetch('/edit_brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brief: currentBrief, prompt })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          addAIMessage(`Ups, coś poszło nie tak (${data.error || 'błąd serwera'}). Spróbuj ponownie.`, true);
+          return;
+        }
+
+        const prevBrief = currentBrief;
+        currentBrief    = data.brief;
+        currentMissing  = data.missing_fields || [];
+        renderSidebar();
+
+        // Flash all updated fields
+        (data.updated_fields || []).forEach(f => {
+          setTimeout(() => flashBriefField(f), 150);
+        });
+
+        addAIMessage(data.response || 'Zaktualizowałam brief.', true);
+
+        // If new missing fields appeared, switch back to filling mode
+        if (currentMissing.length > 0) {
+          chatMode = 'filling';
+          const inputBar = document.getElementById('chat-input-bar');
+          inputBar.classList.remove('edit-mode');
+          document.getElementById('chat-input').placeholder = 'Wpisz odpowiedź…';
+          const badge = document.getElementById('edit-mode-badge');
+          if (badge) badge.remove();
+          document.getElementById('brief-panel-actions').style.display = 'none';
+          setTimeout(() => askNext(), 900);
+        }
+
+      } catch (err) {
+        addAIMessage('Wystąpił błąd połączenia. Spróbuj ponownie.');
+      } finally {
+        document.getElementById('btn-chat-send').disabled = false;
+        document.getElementById('chat-input').focus();
       }
     }
 
     function closeChatOverlay() {
       document.getElementById('chat-overlay').style.display = 'none';
-      document.getElementById('chat-input-bar').style.display = 'flex';
+
+      // Reset split layout
+      const panel = document.getElementById('brief-panel');
+      panel.classList.remove('visible');
+      document.querySelector('.chat-body').classList.remove('split');
+
+      // Reset input bar
+      const inputBar = document.getElementById('chat-input-bar');
+      inputBar.style.display = 'flex';
+      inputBar.classList.remove('edit-mode');
+      document.getElementById('chat-input').placeholder = 'Wpisz odpowiedź…';
+
+      // Remove edit-mode badge
+      const badge = document.getElementById('edit-mode-badge');
+      if (badge) badge.remove();
+
+      // Restore brief panel header in case preview mode was active
+      const panelHeader = document.querySelector('.brief-panel-header');
+      if (panelHeader) {
+        panelHeader.innerHTML = `
+          <span class="brief-panel-title">Podgląd briefu</span>
+          <div class="brief-panel-actions" id="brief-panel-actions" style="display:none;">
+            <button class="btn btn-primary btn-sm" onclick="finalizeBrief()">Generuj &gt;</button>
+          </div>`;
+      }
+
+      // Hide panel status
+      const panelStatus = document.getElementById('brief-panel-status');
+      if (panelStatus) panelStatus.style.display = 'none';
+
+      chatMode = 'filling';
       document.body.style.overflow = '';
     }
 

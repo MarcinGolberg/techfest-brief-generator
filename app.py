@@ -11,6 +11,7 @@ from services.brief_schema import FIELD_RULES
 from services.chat_agent import validate_and_process_answer
 from services.document_brief_builder import build_document_brief
 from services.brief_generator import generate_brief_file
+from services.brief_editor import edit_brief_with_prompt
 
 app = Flask(__name__)
 app.json.ensure_ascii = False
@@ -241,9 +242,65 @@ def finalize():
         )
 
 
+@app.route("/edit_brief", methods=["POST"])
+def edit_brief():
+    try:
+        data = request.get_json()
+        brief = data["brief"]
+        edit_prompt = data.get("prompt", "")
+
+        if not edit_prompt.strip():
+            return Response(
+                json.dumps({"error": "Brak polecenia edycji"}, ensure_ascii=False),
+                mimetype="application/json; charset=utf-8",
+                status=400
+            )
+
+        result = edit_brief_with_prompt(brief, edit_prompt)
+
+        updated_fields = result.get("updated_fields", {})
+
+        for field, value in updated_fields.items():
+            from services.brief_schema import FIELD_RULES
+            field_type = FIELD_RULES.get(field, {}).get("type", "string")
+            if field_type == "list":
+                if isinstance(value, list):
+                    brief[field] = [str(v).strip() for v in value if str(v).strip()]
+                else:
+                    items = re.split(r"[,;\n]+", str(value))
+                    brief[field] = [item.strip() for item in items if item.strip()]
+            else:
+                brief[field] = str(value).strip() if value else ""
+
+        missing_fields = detect_missing_fields(brief)
+
+        return Response(
+            json.dumps({
+                "brief": brief,
+                "missing_fields": missing_fields,
+                "updated_fields": list(updated_fields.keys()),
+                "response": result.get("response", ""),
+            }, ensure_ascii=False),
+            mimetype="application/json; charset=utf-8"
+        )
+
+    except Exception as e:
+        return Response(
+            json.dumps({"error": str(e)}, ensure_ascii=False),
+            mimetype="application/json; charset=utf-8",
+            status=500
+        )
+
+
 @app.route("/download-generated/<filename>", methods=["GET"])
 def download_generated(filename):
     return send_from_directory(GENERATED_FOLDER, filename, as_attachment=True)
+
+
+@app.route("/preview-generated/<filename>", methods=["GET"])
+def preview_generated(filename):
+    """Serve the file inline so it can be embedded in an <iframe> for PDF preview."""
+    return send_from_directory(GENERATED_FOLDER, filename, as_attachment=False)
 
 
 if __name__ == "__main__":
