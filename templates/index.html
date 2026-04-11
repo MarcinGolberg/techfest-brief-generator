@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accenture &mdash; Let&apos;s solve what&apos;s next</title>
+  <style>
+    /* ── Reset & Tokens ───────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:      #4A4AFF;
+      --purple-dim:  #3535c2;
+      --black:       #000000;
+      --white:       #FFFFFF;
+      --gray-dark:   #707070;
+      --gray-light:  #F2F2F2;
+      --gray-mid:    #d0d0d0;
+      --font: "Graphik", "Helvetica Neue", Arial, "Roboto", sans-serif;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--black);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Sticky Header ────────────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.3s;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--purple);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.6s var(--ease-out);
+    }
+
+    header.scrolled::after { transform: scaleX(1); }
+
+    .logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      user-select: none;
+    }
+    .logo em { color: var(--purple); font-style: normal; }
+
+    nav { display: flex; gap: 32px; align-items: center; }
+
+    nav a {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      text-decoration: none;
+      transition: color 0.2s;
+      position: relative;
+      padding-bottom: 2px;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 0; height: 1px;
+      background: var(--purple);
+      transition: width 0.25s var(--ease-out);
+    }
+
+    nav a:hover { color: var(--white); }
+    nav a:hover::after { width: 100%; }
+
+    /* ── Hero ─────────────────────────────────────────── */
+    .hero {
+      padding: 96px 48px 72px;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Entrance animations */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      animation: fadeUp 0.7s var(--ease-out) forwards;
+    }
+    .fade-up:nth-child(1) { animation-delay: 0.05s; }
+    .fade-up:nth-child(2) { animation-delay: 0.18s; }
+    .fade-up:nth-child(3) { animation-delay: 0.32s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 20px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 1px;
+      background: var(--purple);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      color: var(--white);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 .word-accent {
+      color: var(--purple);
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Animated underline on headline accent */
+    .hero h1 .word-accent::after {
+      content: '';
+      position: absolute;
+      bottom: 4px; left: 0;
+      width: 100%; height: 2px;
+      background: var(--purple);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: lineReveal 0.6s 0.9s var(--ease-out) forwards;
+    }
+
+    @keyframes lineReveal { to { transform: scaleX(1); } }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--gray-dark);
+      line-height: 1.75;
+      max-width: 520px;
+      margin-bottom: 40px;
+    }
+
+    /* ── Composer Card ────────────────────────────────── */
+    .composer {
+      background: var(--white);
+      border: 1px solid var(--gray-mid);
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .composer:focus-within {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(161, 0, 255, 0.12);
+    }
+
+    .composer textarea {
+      display: block;
+      width: 100%;
+      min-height: 200px;
+      resize: vertical;
+      border: none;
+      outline: none;
+      padding: 24px;
+      font-family: var(--font);
+      font-size: 1rem;
+      line-height: 1.75;
+      color: var(--black);
+      background: transparent;
+    }
+
+    .composer textarea::placeholder { color: var(--gray-mid); }
+
+    /* ── Drop Zone ────────────────────────────────────── */
+    .drop-zone {
+      margin: 0 24px;
+      padding: 20px;
+      border: 1px dashed var(--gray-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--gray-dark);
+      letter-spacing: 0.04em;
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+      cursor: default;
+    }
+
+    .drop-zone.drag-over {
+      border-color: var(--purple);
+      background: rgba(161, 0, 255, 0.04);
+      color: var(--purple);
+    }
+
+    .drop-zone svg { flex-shrink: 0; }
+
+    /* ── Char Counter ─────────────────────────────────── */
+    .composer-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 6px 24px 0;
+    }
+
+    .char-count {
+      font-size: 0.72rem;
+      color: var(--gray-dark);
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .char-count.warn { color: #f59e0b; }
+    .char-count.limit { color: #ef4444; }
+
+    /* ── Toolbar ──────────────────────────────────────── */
+    .composer-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-top: 1px solid var(--gray-light);
+      background: var(--gray-light);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    /* Shared button base */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+    }
+
+    /* Ripple layer */
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.3s var(--ease-out);
+    }
+    .btn:not(:disabled):hover::before { transform: translateX(0); }
+
+    /* Ghost (upload) */
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--black);
+      color: var(--black);
+    }
+    .btn-ghost:not(:disabled):hover {
+      background: var(--black);
+      color: var(--white);
+    }
+
+    /* Solid purple (submit) */
+    .btn-primary {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: var(--white);
+    }
+    .btn-primary:not(:disabled):hover {
+      background: var(--purple-dim);
+      border-color: var(--purple-dim);
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn:not(:disabled) { cursor: pointer; }
+
+    /* ── Toast ────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--black);
+      border: 1px solid var(--purple);
+      color: var(--white);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.3s, transform 0.3s var(--ease-out);
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    #toast .toast-dot {
+      width: 6px; height: 6px;
+      background: var(--purple);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Feature Cards (zebra white) ──────────────────── */
+    .zebra-white { background: var(--white); }
+
+    .features {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 80px 48px;
+    }
+
+    .features-header {
+      margin-bottom: 48px;
+    }
+
+    .features-header h2 {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--black);
+      line-height: 1.1;
+    }
+
+    .features-header h2 em {
+      color: var(--purple);
+      font-style: normal;
+    }
+
+    .features-header p {
+      margin-top: 16px;
+      font-size: 1rem;
+      color: var(--gray-dark);
+      line-height: 1.7;
+      max-width: 480px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--gray-mid);
+      border: 1px solid var(--gray-mid);
+    }
+
+    .feature-card {
+      background: var(--white);
+      padding: 36px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: background 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 3px;
+      background: var(--purple);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s var(--ease-out);
+    }
+
+    .feature-card:hover { background: var(--gray-light); }
+    .feature-card:hover::after { transform: scaleX(1); }
+
+    .card-icon {
+      width: 40px; height: 40px;
+      border: 1px solid var(--gray-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--purple);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .feature-card:hover .card-icon {
+      border-color: var(--purple);
+      background: rgba(161, 0, 255, 0.06);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--black);
+    }
+
+    .card-body {
+      font-size: 0.875rem;
+      color: var(--gray-dark);
+      line-height: 1.7;
+    }
+
+    .card-cta {
+      margin-top: auto;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--purple);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: gap 0.2s;
+    }
+
+    .feature-card:hover .card-cta { gap: 10px; }
+
+    /* ── Stats Bar ────────────────────────────────────── */
+    .stats-bar {
+      background: var(--purple);
+      padding: 40px 48px;
+    }
+
+    .stats-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+    }
+
+    .stat {
+      padding: 0 32px;
+      border-left: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .stat:first-child { border-left: none; padding-left: 0; }
+
+    .stat-number {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .stat-label {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.65);
+    }
+
+    /* ── Footer ───────────────────────────────────────── */
+    footer {
+      background: var(--black);
+      border-top: 1px solid #1a1a1a;
+      padding: 28px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: var(--gray-dark);
+      letter-spacing: 0.02em;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--purple); }
+
+    /* ── Scroll-reveal ────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      header { padding: 0 24px; }
+      nav { display: none; }
+
+      .hero { padding: 56px 24px 48px; }
+
+      .cards-grid { grid-template-columns: 1fr; }
+      .features { padding: 56px 24px; }
+
+      .stats-inner { grid-template-columns: 1fr; gap: 24px; }
+      .stat { border-left: none; padding-left: 0; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; }
+      .stat:first-child { border-top: none; padding-top: 0; }
+      .stats-bar { padding: 40px 24px; }
+
+      footer { flex-direction: column; align-items: flex-start; padding: 24px; }
+      .drop-zone { margin: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────── -->
+  <header id="site-header">
+    <div class="logo">accent<em>ure</em></div>
+    <nav>
+      <a href="#">Services</a>
+      <a href="#">Industries</a>
+      <a href="#">Insights</a>
+      <a href="#">Careers</a>
+    </nav>
+  </header>
+
+  <!-- ── Hero ────────────────────────────────────────── -->
+  <main>
+    <section class="hero">
+
+      <div class="fade-up">
+        <p class="eyebrow">AI &amp; Intelligent Solutions</p>
+        <h1>Let&apos;s solve<br>what&apos;s <span class="word-accent">next &gt;</span></h1>
+        <p>Describe your challenge below. Attach supporting documents for context, then submit — and we&apos;ll get to work.</p>
+      </div>
+
+      <!-- Composer -->
+      <div class="composer fade-up">
+        <textarea
+          id="msg"
+          maxlength="2000"
+          placeholder="Describe your challenge, question, or goal…"
+          aria-label="Message input"
+        ></textarea>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="drop-zone" aria-label="Drag and drop area">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="square">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19
+                     a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+          Drag &amp; drop files here, or use the button below
+        </div>
+
+        <!-- Char counter -->
+        <div class="composer-meta">
+          <span class="char-count" id="char-count">0 / 2000</span>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="composer-toolbar">
+          <button class="btn btn-ghost" id="btn-upload" aria-label="Upload documents">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19
+                       a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+            Upload Documents
+          </button>
+          <button class="btn btn-primary" id="btn-submit" aria-label="Submit">
+            Submit &gt;
+          </button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ── Feature Cards ────────────────────────────────── -->
+  <div class="zebra-white">
+    <div class="features reveal">
+      <div class="features-header">
+        <h2>Technology that<br>moves <em>&gt;</em></h2>
+        <p>Powered by intelligence, designed for people. Built to deliver outcomes that matter at every scale.</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="feature-card">
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+          </div>
+          <p class="card-title">AI &amp; Machine Learning</p>
+          <p class="card-body">Embed intelligence into every process. From predictive analytics to generative AI, we turn data into decisions.</p>
+          <span class="card-cta">Learn more &gt;</span>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <rect x="2" y="3" width="20" height="14"/>
+              <path d="M8 21h8M12 17v4"/>
+            </svg>
+          </div>
+          <p class="card-title">Cloud &amp; Infrastructure</p>
+          <p class="card-body">Modernize at speed with a cloud strategy built for resilience, security, and continuous reinvention.</p>
+          <span class="card-cta">Learn more &gt;</span>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <p class="card-title">Cybersecurity</p>
+          <p class="card-body">Protect what matters most. We safeguard your digital core with end-to-end cyber resilience strategies.</p>
+          <span class="card-cta">Learn more &gt;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stats Bar ─────────────────────────────────────── -->
+  <div class="stats-bar reveal">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-number">742K+</div>
+        <div class="stat-label">People worldwide</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">120+</div>
+        <div class="stat-label">Countries served</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">#1</div>
+        <div class="stat-label">IT services company</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ────────────────────────────────────────── -->
+  <footer>
+    <span class="footer-copy">&copy; 2026 Accenture. All rights reserved.</span>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Accessibility</a>
+    </div>
+  </footer>
+
+  <!-- ── Toast ─────────────────────────────────────────── -->
+  <div id="toast" role="status" aria-live="polite">
+    <div class="toast-dot"></div>
+    <span id="toast-msg">Coming soon</span>
+  </div>
+
+  <!-- ── Scripts ───────────────────────────────────────── -->
+  <script>
+    /* Sticky header purple line on scroll */
+    const header = document.getElementById('site-header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 10);
+    }, { passive: true });
+
+    /* Character counter */
+    const textarea = document.getElementById('msg');
+    const charCount = document.getElementById('char-count');
+    const MAX = 2000;
+
+    textarea.addEventListener('input', () => {
+      const n = textarea.value.length;
+      charCount.textContent = `${n.toLocaleString()} / ${MAX.toLocaleString()}`;
+      charCount.classList.toggle('warn', n >= MAX * 0.8 && n < MAX);
+      charCount.classList.toggle('limit', n >= MAX);
+    });
+
+    /* Toast helper */
+    let toastTimer;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    /* Button handlers — not functioning yet, show toast */
+    document.getElementById('btn-upload').addEventListener('click', () => {
+      showToast('Upload Documents — coming soon');
+    });
+
+    document.getElementById('btn-submit').addEventListener('click', () => {
+      const text = textarea.value.trim();
+      if (!text) {
+        showToast('Please enter a message first');
+        textarea.focus();
+        return;
+      }
+      showToast('Submit — coming soon');
+    });
+
+    /* Drag & drop visual feedback */
+    const dropZone = document.getElementById('drop-zone');
+    let dragCounter = 0;
+
+    document.addEventListener('dragenter', (e) => {
+      if (e.dataTransfer.types.includes('Files')) {
+        dragCounter++;
+        dropZone.classList.add('drag-over');
+      }
+    });
+
+    document.addEventListener('dragleave', () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropZone.classList.remove('drag-over');
+      }
+    });
+
+    document.addEventListener('dragover', (e) => e.preventDefault());
+
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      dropZone.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length) {
+        showToast(`${files.length} file${files.length > 1 ? 's' : ''} received — upload coming soon`);
+      }
+    });
+
+    /* Scroll-reveal via IntersectionObserver */
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
