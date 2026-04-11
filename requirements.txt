@@ -8,4 +8,4 @@ python-pptx
 openpyxl
 reportlab
 gunicorn
-requests    
+requests
