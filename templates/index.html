@@ -1346,6 +1346,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             brief: currentBrief,
+            sources: currentSources,
+            combined_text: currentCombinedText,
             field: field.field,
             conversation_history: fieldConversation,
           })
@@ -1363,8 +1365,11 @@
         const status = data.status;
 
         if (status === 'accepted') {
-          currentBrief   = data.brief;
-          currentMissing = data.missing_fields;
+          const payload  = data.payload || {};
+          currentBrief   = payload.brief   ?? currentBrief;
+          currentMissing = payload.missing_fields ?? [];
+          if (payload.sources)        currentSources      = payload.sources;
+          if (payload.combined_text)  currentCombinedText = payload.combined_text;
           renderSidebar();
 
           setTimeout(() => {
@@ -1464,6 +1469,10 @@
       btn.disabled = true;
       btn.textContent = 'Zapisuję…';
 
+      // Snapshot state so we can restore it if the request fails
+      const prevBrief   = currentBrief;
+      const prevMissing = currentMissing;
+
       try {
         const res  = await fetch('/update_brief', {
           method: 'POST',
@@ -1472,15 +1481,19 @@
         });
         const data = await res.json();
 
+        if (!res.ok || data.error) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
         currentBrief   = data.brief;
         currentMissing = data.missing_fields;
         renderSidebar();
 
-        // Swap the card for a confirmation bubble
-        const confirm = document.createElement('div');
-        confirm.className = 'chat-msg chat-msg-user';
-        confirm.innerHTML = `<div class="chat-bubble">${escapeHtml(value)}</div>`;
-        card.replaceWith(confirm);
+        // Swap the card for a user bubble
+        const userBubble = document.createElement('div');
+        userBubble.className = 'chat-msg chat-msg-user';
+        userBubble.innerHTML = `<div class="chat-bubble">${escapeHtml(value)}</div>`;
+        card.replaceWith(userBubble);
 
         // Re-enable bottom input
         const chatInput = document.getElementById('chat-input');
@@ -1502,9 +1515,14 @@
         }, 200);
 
       } catch (err) {
+        // Restore state so nothing is corrupted
+        currentBrief   = prevBrief;
+        currentMissing = prevMissing;
+
         btn.disabled    = false;
         btn.textContent = 'Zapisz >';
-        addAIMessage('Błąd zapisu. Spróbuj ponownie.');
+        input.focus();
+        addAIMessage(`Coś poszło nie tak z zapisem (${err.message}). Spróbuj ponownie.`);
       }
     }
 
