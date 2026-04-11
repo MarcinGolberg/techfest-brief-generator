@@ -175,16 +175,36 @@ def _hex_to_rgb(value: str) -> tuple[int, int, int]:
 
 def _load_font(size: int, bold: bool = False):
     candidates = [
+        # app-bundled fonts - najlepsza opcja
+        os.path.join(os.path.dirname(__file__), "fonts", "Graphik-Bold.ttf" if bold else "Graphik-Regular.ttf"),
+        os.path.join(os.path.dirname(__file__), "fonts", "Arial-Bold.ttf" if bold else "Arial.ttf"),
+
+        # Linux / Docker / production
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+
+        # macOS local
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+
+        # fallback by name
         "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+        "LiberationSans-Bold.ttf" if bold else "LiberationSans-Regular.ttf",
     ]
+
     for candidate in candidates:
         try:
-            return ImageFont.truetype(candidate, size=size)
+            if os.path.exists(candidate) or "/" not in candidate:
+                return ImageFont.truetype(candidate, size=size)
         except Exception:
             continue
-    return ImageFont.load_default()
+
+    raise RuntimeError(
+        f"Could not load a usable font for {'bold' if bold else 'regular'} text. "
+        "Bundle a font file with the app and point _load_font() to it."
+    )
 
 
 def _fit_logo(max_width: int, max_height: int) -> Image.Image:
