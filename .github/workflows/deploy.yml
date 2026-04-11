@@ -131,8 +131,7 @@ jobs:
         run: |
           cyclonedx-py environment \
             --output-format JSON \
-            --output-file sbom.json \
-            --schema-version 1.5
+            --output-file sbom.json
           echo "SBOM wygenerowany:"
           cat sbom.json | python3 -m json.tool | head -40
 
