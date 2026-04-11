@@ -1,6 +1,6 @@
-import os
 import json
-from services.ai_service import get_azure_client
+import os
+from services.ai_service import get_azure_client, _get_deployment
 
 SYSTEM_PROMPT = """\
 Jesteś Maja — doświadczona, entuzjastyczna senior marketerka z 15-letnim doświadczeniem w agencji kreatywnej.
@@ -52,8 +52,8 @@ def validate_and_process_answer(
 
     Returns a dict with keys: status, brief_value, response
     """
-    client     = get_azure_client()
-    deployment = os.getenv("AZURE_LLM_DEPLOYMENT")
+    client = get_azure_client()
+    deployment = _get_deployment()
 
     context_block = (
         f"KONTEKST BRIEFU:\n"
@@ -69,7 +69,7 @@ def validate_and_process_answer(
         model=deployment,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": context_block},
+            {"role": "user", "content": context_block},
         ],
         temperature=0.4,
         timeout=30,

@@ -14,7 +14,7 @@ uploads/*
 generated/*
 
 tests/*
-services/*
+
 .idea
 .idea/
 
