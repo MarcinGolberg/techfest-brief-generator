@@ -190,13 +190,42 @@
   100% { background: transparent; }
 }
 
+.brief-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
 .brief-field-label {
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gray-dark);
-  margin-bottom: 5px;
+}
+
+/* ── Confidence dot ───────────────────────────────── */
+.confidence-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.confidence-dot--high {
+  background: #4ade80;
+  box-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+}
+
+.confidence-dot--mid {
+  background: #fb923c;
+  box-shadow: 0 0 5px rgba(251, 146, 60, 0.45);
+}
+
+.confidence-dot--low {
+  background: #f87171;
+  box-shadow: 0 0 5px rgba(248, 113, 113, 0.4);
 }
 
 .brief-field-value {

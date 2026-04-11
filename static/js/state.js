@@ -17,6 +17,7 @@ let currentBrief            = null;
 let currentMissing          = [];
 let currentSources          = [];
 let currentCombinedText     = '';
+let currentConfidenceScores = {};      // {field: 0–100} from initial AI extraction
 let currentDocumentBrief    = null;
 let currentDocumentDownloadUrl = '';
 let currentBadgeGeneration  = null;

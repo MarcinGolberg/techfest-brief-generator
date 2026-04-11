@@ -10,12 +10,13 @@ function resetGeneratedArtifacts() {
 
 function startChatMode(data) {
   resetGeneratedArtifacts();
-  briefHistory        = [];
-  currentBrief        = data.brief;
-  currentMissing      = data.missing_fields || [];
-  currentSources      = data.sources || [];
-  currentCombinedText = data.combined_text || '';
-  chatMode            = 'filling';
+  briefHistory              = [];
+  currentBrief              = data.brief;
+  currentMissing            = data.missing_fields || [];
+  currentSources            = data.sources || [];
+  currentCombinedText       = data.combined_text || '';
+  currentConfidenceScores   = data.confidence_scores || {};
+  chatMode                  = 'filling';
 
   const foundCount = BRIEF_SCHEMA.filter(s => {
     const v = currentBrief[s.field];
