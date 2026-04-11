@@ -16,7 +16,7 @@ def analyze_inputs(raw_texts=None, file_paths=None):
     combined_text = payload.get("combined_text", "")
 
     if not combined_text.strip():
-        raise ValueError("No input text found after parsing.")
+        raise ValueError("Brak tekstu wejściowego po parsowaniu.")
 
     raw_ai_response = extract_brief_from_text(combined_text)
 
@@ -34,13 +34,13 @@ def analyze_inputs(raw_texts=None, file_paths=None):
     try:
         brief_json = json.loads(cleaned_response)
     except json.JSONDecodeError:
-        raise ValueError(f"Model returned invalid JSON: {raw_ai_response}")
+        raise ValueError(f"Model zwrócił niepoprawny JSON: {raw_ai_response}")
 
     missing_fields = detect_missing_fields(brief_json)
 
     return {
         "sources": payload.get("sources", []),
-        #"combined_text": combined_text,
+        "combined_text": combined_text,
         "brief": brief_json,
         "missing_fields": missing_fields
     }

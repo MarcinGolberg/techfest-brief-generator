@@ -605,6 +605,14 @@
           <span class="char-count" id="char-count">0 / 2000</span>
         </div>
 
+        <input
+          type="file"
+          id="file-input"
+          multiple
+          accept=".pdf,.doc,.docx,.pptx,.eml,.xlsx,.txt"
+          style="display: none;"
+        />
+
         <!-- Toolbar -->
         <div class="composer-toolbar">
           <button class="btn btn-ghost" id="btn-upload" aria-label="Upload documents">
@@ -621,6 +629,13 @@
         </div>
       </div>
 
+    </section>
+
+    <section style="max-width: 1000px; margin: 0 auto; padding: 0 48px 48px;">
+      <div
+        id="result-box"
+        style="display:none; background:#111; color:#fff; border:1px solid #333; padding:24px; white-space:pre-wrap; font-family:monospace;"
+      ></div>
     </section>
   </main>
 
@@ -710,16 +725,22 @@
 
   <!-- ── Scripts ───────────────────────────────────────── -->
   <script>
-    /* Sticky header purple line on scroll */
     const header = document.getElementById('site-header');
     window.addEventListener('scroll', () => {
       header.classList.toggle('scrolled', window.scrollY > 10);
     }, { passive: true });
 
-    /* Character counter */
     const textarea = document.getElementById('msg');
     const charCount = document.getElementById('char-count');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('btn-upload');
+    const submitBtn = document.getElementById('btn-submit');
+    const resultBox = document.getElementById('result-box');
+
     const MAX = 2000;
+    let selectedFiles = [];
+    let toastTimer;
 
     textarea.addEventListener('input', () => {
       const n = textarea.value.length;
@@ -728,8 +749,6 @@
       charCount.classList.toggle('limit', n >= MAX);
     });
 
-    /* Toast helper */
-    let toastTimer;
     function showToast(msg) {
       const toast = document.getElementById('toast');
       document.getElementById('toast-msg').textContent = msg;
@@ -738,23 +757,35 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
     }
 
-    /* Button handlers — not functioning yet, show toast */
-    document.getElementById('btn-upload').addEventListener('click', () => {
-      showToast('Upload Documents — coming soon');
-    });
-
-    document.getElementById('btn-submit').addEventListener('click', () => {
-      const text = textarea.value.trim();
-      if (!text) {
-        showToast('Please enter a message first');
-        textarea.focus();
+    function updateDropZoneLabel() {
+      if (selectedFiles.length === 0) {
+        dropZone.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="square">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19
+                    a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+          Przeciągnij pliki tutaj albo użyj przycisku poniżej
+        `;
         return;
       }
-      showToast('Submit — coming soon');
+
+      const names = selectedFiles.map(f => f.name).join(", ");
+      dropZone.textContent = `Wybrane pliki (${selectedFiles.length}): ${names}`;
+    }
+
+    uploadBtn.addEventListener('click', () => {
+      fileInput.click();
     });
 
-    /* Drag & drop visual feedback */
-    const dropZone = document.getElementById('drop-zone');
+    fileInput.addEventListener('change', () => {
+      selectedFiles = Array.from(fileInput.files);
+      updateDropZoneLabel();
+      if (selectedFiles.length) {
+        showToast(`Dodano ${selectedFiles.length} plik(ów)`);
+      }
+    });
+
     let dragCounter = 0;
 
     document.addEventListener('dragenter', (e) => {
@@ -778,13 +809,61 @@
       e.preventDefault();
       dragCounter = 0;
       dropZone.classList.remove('drag-over');
-      const files = Array.from(e.dataTransfer.files);
+
+      const files = Array.from(e.dataTransfer.files || []);
       if (files.length) {
-        showToast(`${files.length} file${files.length > 1 ? 's' : ''} received — upload coming soon`);
+        selectedFiles = files;
+        updateDropZoneLabel();
+        showToast(`Dodano ${files.length} plik(ów)`);
       }
     });
 
-    /* Scroll-reveal via IntersectionObserver */
+    submitBtn.addEventListener('click', async () => {
+      const message = textarea.value.trim();
+
+      if (!message && selectedFiles.length === 0) {
+        showToast('Dodaj wiadomość albo co najmniej jeden plik');
+        textarea.focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Wysyłanie...';
+
+      try {
+        const formData = new FormData();
+        formData.append("message", message);
+
+        selectedFiles.forEach(file => {
+          formData.append("files", file);
+        });
+
+        const response = await fetch("/analyze", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        resultBox.style.display = "block";
+        resultBox.textContent = JSON.stringify(data, null, 2);
+
+        if (!response.ok) {
+          showToast("Błąd podczas generowania briefu");
+          return;
+        }
+
+        showToast("Brief wygenerowany");
+      } catch (error) {
+        resultBox.style.display = "block";
+        resultBox.textContent = `Błąd: ${error.message}`;
+        showToast("Błąd połączenia z backendem");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit >';
+      }
+    });
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
