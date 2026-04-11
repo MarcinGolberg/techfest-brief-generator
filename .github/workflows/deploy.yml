@@ -221,15 +221,6 @@ jobs:
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
-      # Quality Gate — parametry zdefiniowane w SonarQube UI / sonar-project.properties
-      # Wymagane warunki Quality Gate (konfiguracja po stronie SonarQube):
-      #   - vulnerabilities (HIGH+CRITICAL) = 0           → FAIL jeśli > 0
-      #   - bugs = 0                                       → FAIL jeśli > 0
-      #   - duplicated_lines_density <= 5.0               → FAIL jeśli > 5%
-      #   - security_hotspots_reviewed = 100              → FAIL jeśli < 100%
-      #   - security_rating = A (1.0)                     → FAIL jeśli gorszy niż A
-      # SonarQube zwróci exit code != 0 jeśli Quality Gate = FAILED → pipeline zatrzymany
-
   # ============================================================
   # JOB 5: BUILD & DEPLOY to Azure App Service (A.1)
   # Uruchamiany TYLKO po przejściu wszystkich bramek bezpieczeństwa
@@ -260,3 +251,4 @@ jobs:
         with:
           app-name: 'accenturebrief'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          startup-command: 'gunicorn --bind=0.0.0.0 --timeout 600 app:app'
