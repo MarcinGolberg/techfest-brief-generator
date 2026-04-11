@@ -27,7 +27,8 @@ app = Flask(__name__)
 app.json.ensure_ascii = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB upload cap
 
-GENERATED_FOLDER = "generated"
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+GENERATED_FOLDER = os.path.join(_BASE_DIR, "generated")
 os.makedirs(GENERATED_FOLDER, exist_ok=True)
 
 # Only generated files produced by this app are allowed through download routes
