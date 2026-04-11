@@ -1204,12 +1204,16 @@
 
     let currentBrief = null;
     let currentMissing = [];
+    let currentSources = [];
+    let currentCombinedText = '';
     let fieldConversation = [];   // [{role, content}] for the current field only
     let invalidStreak = 0;        // consecutive "invalid" responses for the current field
 
     function startChatMode(data) {
       currentBrief   = data.brief;
       currentMissing = data.missing_fields || [];
+      currentSources = data.sources || [];
+      currentCombinedText = data.combined_text || '';
 
       const overlay = document.getElementById('chat-overlay');
       const label   = document.getElementById('chat-product-label');
@@ -1526,20 +1530,57 @@
       card.className = 'brief-complete-card';
       card.innerHTML = `
         <h3>Brief kompletny ✓</h3>
-        <p>Wszystkie pola zostały wypełnione. Możesz pobrać brief lub wrócić do strony głównej.</p>
-        <button class="btn btn-primary" onclick="downloadBrief()" style="margin-right:10px;">Pobierz JSON &gt;</button>
-        <button class="btn btn-ghost" onclick="closeChatOverlay()">Wróć</button>
+        <p>Przekazuję pełny zestaw danych (brief + sources + combined_text) do kolejnego etapu.</p>
+        <div id="final-status" style="margin:10px 0; color:#555;">Trwa generowanie dokumentu…</div>
+        <div id="final-actions" style="display:none; gap:8px;">
+          <a id="final-download" class="btn btn-primary" href="#" download> Pobierz plik &gt; </a>
+          <button class="btn btn-ghost" onclick="closeChatOverlay()">Wróć</button>
+        </div>
       `;
       msgs.appendChild(card);
       msgs.scrollTop = msgs.scrollHeight;
+
+      finalizeBrief();
     }
 
-    function downloadBrief() {
-      const blob = new Blob([JSON.stringify(currentBrief, null, 2)], { type: 'application/json' });
-      const a    = document.createElement('a');
-      a.href     = URL.createObjectURL(blob);
-      a.download = 'brief.json';
-      a.click();
+    async function finalizeBrief() {
+      const statusEl  = document.getElementById('final-status');
+      const actionsEl = document.getElementById('final-actions');
+      const linkEl    = document.getElementById('final-download');
+
+      try {
+        const res = await fetch('/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brief: currentBrief,
+            sources: currentSources,
+            combined_text: currentCombinedText,
+            format: 'docx'
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          const detail = data.error ? ` (${data.error})` : '';
+          statusEl.textContent = `Nie udało się wygenerować dokumentu${detail}.`;
+          statusEl.style.color = '#c00';
+          return;
+        }
+
+        statusEl.textContent = 'Dokument gotowy — możesz go pobrać lub przejść dalej.';
+        statusEl.style.color = '#222';
+
+        if (data.download_url) {
+          linkEl.href = data.download_url;
+          actionsEl.style.display = 'flex';
+        }
+
+      } catch (err) {
+        statusEl.textContent = `Błąd połączenia: ${err.message}`;
+        statusEl.style.color = '#c00';
+      }
     }
 
     function closeChatOverlay() {

@@ -69,6 +69,8 @@ def chat_answer():
         data = request.get_json()
 
         brief = data["brief"]
+        sources = data.get("sources", [])
+        combined_text = data.get("combined_text", "")
         field = data["field"]
         conversation_history = data["conversation_history"]
 
@@ -105,8 +107,12 @@ def chat_answer():
                 json.dumps({
                     "status": "accepted",
                     "response": result.get("response", ""),
-                    "brief": brief,
-                    "missing_fields": missing_fields
+                    "payload": {
+                        "brief": brief,
+                        "sources": sources,
+                        "combined_text": combined_text,
+                        "missing_fields": missing_fields
+                    }
                 }, ensure_ascii=False),
                 mimetype="application/json; charset=utf-8"
             )
@@ -114,7 +120,13 @@ def chat_answer():
         return Response(
             json.dumps({
                 "status": status,
-                "response": result.get("response", "")
+                "response": result.get("response", ""),
+                "payload": {
+                    "brief": brief,
+                    "sources": sources,
+                    "combined_text": combined_text,
+                    "missing_fields": detect_missing_fields(brief)
+                }
             }, ensure_ascii=False),
             mimetype="application/json; charset=utf-8"
         )
