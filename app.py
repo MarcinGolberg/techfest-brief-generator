@@ -91,10 +91,13 @@ def chat_answer():
             raw_value = result.get("brief_value") or ""
 
             if field_type == "list":
-                items = re.split(r"[,;\n]+", raw_value)
-                brief[field] = [item.strip() for item in items if item.strip()]
+                if isinstance(raw_value, list):
+                    brief[field] = [str(item).strip() for item in raw_value if str(item).strip()]
+                else:
+                    items = re.split(r"[,;\n]+", raw_value)
+                    brief[field] = [item.strip() for item in items if item.strip()]
             else:
-                brief[field] = raw_value.strip()
+                brief[field] = raw_value.strip() if isinstance(raw_value, str) else str(raw_value)
 
             missing_fields = detect_missing_fields(brief)
 
