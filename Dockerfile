@@ -28,5 +28,5 @@ RUN useradd -m team4user
 USER team4user
 
 # 8. Expose and Start
-EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "600", "app:app"]
+EXPOSE 8080
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "600", "app:app"]
