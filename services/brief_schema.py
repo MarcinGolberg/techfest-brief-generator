@@ -2,7 +2,7 @@ FIELD_RULES = {
     "campaign_goal": {
         "label": "Cel kampanii",
         "type": "string",
-        "question": "Jaki jest glowny cel kampanii?"
+        "question": "Jaki jest główny cel kampanii?"
     },
     "product_or_service": {
         "label": "Produkt lub usługa",
@@ -50,5 +50,3 @@ FIELD_RULES = {
         "question": "Jakie są oczekiwania klienta wobec kampanii lub materiałów?"
     }
 }
-
-REQUIRED_FIELDS = list(FIELD_RULES.keys())

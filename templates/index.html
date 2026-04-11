@@ -538,6 +538,206 @@
 
     .reveal.visible { opacity: 1; transform: translateY(0); }
 
+    /* ── Chat Overlay ─────────────────────────────────── */
+    .chat-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: var(--black);
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 0.25s var(--ease-out);
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .chat-header {
+      height: 64px;
+      background: rgba(0,0,0,0.97);
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .chat-header-info { display: flex; align-items: center; gap: 20px; }
+
+    .chat-product-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      border-left: 1px solid #333;
+      padding-left: 20px;
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-body { flex: 1; display: flex; overflow: hidden; }
+
+    /* Sidebar */
+    .brief-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #080808;
+      border-right: 1px solid #1a1a1a;
+      padding: 28px 18px;
+      overflow-y: auto;
+    }
+
+    .brief-sidebar-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray-dark);
+      margin-bottom: 18px;
+    }
+
+    .progress-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      margin-bottom: 2px;
+      font-size: 0.8rem;
+      border-left: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .progress-done  { color: #4ade80; border-left-color: #4ade80; }
+    .progress-missing { color: #444; }
+    .progress-current {
+      color: var(--white);
+      background: rgba(161,0,255,0.09);
+      border-left-color: var(--purple);
+    }
+
+    .progress-icon { width: 14px; text-align: center; flex-shrink: 0; font-size: 0.8rem; }
+
+    /* Chat main */
+    .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 56px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .chat-msg { display: flex; gap: 12px; max-width: 700px; }
+    .chat-msg-ai  { align-self: flex-start; }
+    .chat-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .chat-avatar {
+      width: 32px; height: 32px;
+      background: var(--purple);
+      color: var(--white);
+      font-size: 0.7rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+
+    .chat-msg-ai .chat-bubble {
+      background: #111;
+      border: 1px solid #222;
+      color: var(--white);
+      max-width: 560px;
+    }
+
+    .chat-msg-user .chat-bubble {
+      background: var(--purple);
+      color: var(--white);
+      max-width: 480px;
+    }
+
+    /* Input bar */
+    .chat-input-bar {
+      padding: 16px 40px;
+      border-top: 1px solid #1a1a1a;
+      background: #080808;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .chat-input-bar textarea {
+      flex: 1;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      color: var(--white);
+      padding: 11px 14px;
+      font-family: var(--font);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      resize: none;
+      min-height: 44px;
+      max-height: 140px;
+      outline: none;
+      transition: border-color 0.2s;
+      overflow-y: auto;
+    }
+
+    .chat-input-bar textarea:focus { border-color: var(--purple); }
+    .chat-input-bar textarea::placeholder { color: #444; }
+
+    /* Typing indicator */
+    .typing-wrap { display: flex; gap: 12px; align-items: flex-start; }
+
+    .typing-bubble {
+      padding: 14px 18px;
+      background: #111;
+      border: 1px solid #222;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 5px; height: 5px;
+      background: var(--gray-dark);
+      border-radius: 50%;
+      animation: typingBounce 1.1s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Complete card */
+    .brief-complete-card {
+      background: #0c0c0c;
+      border: 1px solid #2a2a2a;
+      border-left: 3px solid var(--purple);
+      padding: 22px 26px;
+      max-width: 440px;
+    }
+
+    .brief-complete-card h3 {
+      font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; color: var(--white);
+    }
+
+    .brief-complete-card p {
+      font-size: 0.82rem; color: var(--gray-dark); margin-bottom: 16px; line-height: 1.6;
+    }
+
     /* ── Responsive ───────────────────────────────────── */
     @media (max-width: 768px) {
       header { padding: 0 24px; }
@@ -717,6 +917,40 @@
     </div>
   </footer>
 
+  <!-- ── Chat Overlay ─────────────────────────────────── -->
+  <div id="chat-overlay" class="chat-overlay" style="display:none;">
+
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="logo">accent<em>ure</em></div>
+        <span class="chat-product-tag" id="chat-product-label">Brief</span>
+      </div>
+      <button class="btn btn-ghost" id="btn-chat-close" style="font-size:0.75rem; padding:8px 18px;">
+        ✕ Wróć
+      </button>
+    </div>
+
+    <div class="chat-body">
+      <aside class="brief-sidebar">
+        <div class="brief-sidebar-title">Postęp briefu</div>
+        <div id="brief-progress-list"></div>
+      </aside>
+
+      <div class="chat-main">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-bar" id="chat-input-bar">
+          <textarea
+            id="chat-input"
+            rows="1"
+            placeholder="Wpisz odpowiedź…"
+          ></textarea>
+          <button class="btn btn-primary" id="btn-chat-send">Wyślij &gt;</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
   <!-- ── Toast ─────────────────────────────────────────── -->
   <div id="toast" role="status" aria-live="polite">
     <div class="toast-dot"></div>
@@ -845,14 +1079,14 @@
 
         const data = await response.json();
 
-        resultBox.style.display = "block";
-        resultBox.textContent = JSON.stringify(data, null, 2);
-
         if (!response.ok) {
+          resultBox.style.display = "block";
+          resultBox.textContent = JSON.stringify(data, null, 2);
           showToast("Błąd podczas generowania briefu");
           return;
         }
 
+        startChatMode(data);
         showToast("Brief wygenerowany");
       } catch (error) {
         resultBox.style.display = "block";
@@ -863,6 +1097,257 @@
         submitBtn.textContent = 'Submit >';
       }
     });
+
+    // ── Chat logic ────────────────────────────────────
+    const BRIEF_SCHEMA = [
+      { field: 'campaign_goal',       label: 'Cel kampanii',            type: 'string' },
+      { field: 'product_or_service',  label: 'Produkt lub usługa',      type: 'string' },
+      { field: 'target_audience',     label: 'Grupa docelowa',          type: 'string' },
+      { field: 'key_messages',        label: 'Kluczowe komunikaty',     type: 'list'   },
+      { field: 'marketing_channels',  label: 'Kanały marketingowe',     type: 'list'   },
+      { field: 'tone_of_voice',       label: 'Ton komunikacji',         type: 'string' },
+      { field: 'kpis',                label: 'KPI',                     type: 'list'   },
+      { field: 'success_measurement', label: 'Ocena sukcesu',           type: 'string' },
+      { field: 'scope_of_work',       label: 'Zakres działań',          type: 'string' },
+      { field: 'client_expectations', label: 'Oczekiwania klienta',     type: 'string' },
+    ];
+
+    const ACK_PHRASES = [
+      'Dziękuję!', 'Rozumiem.', 'Dobrze, zapisałem.', 'Świetnie!', 'Jasne.'
+    ];
+
+    let currentBrief = null;
+    let currentMissing = [];
+    let fieldConversation = [];   // [{role, content}] for the current field only
+
+    function startChatMode(data) {
+      currentBrief   = data.brief;
+      currentMissing = data.missing_fields || [];
+
+      const overlay = document.getElementById('chat-overlay');
+      const label   = document.getElementById('chat-product-label');
+      label.textContent = currentBrief.product_or_service || 'Brief';
+
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      document.getElementById('chat-messages').innerHTML = '';
+      renderSidebar();
+
+      addAIMessage(
+        'Cześć! Przeanalizowałam przesłane materiały i przygotowałam wstępny brief. ' +
+        'Potrzebuję jeszcze kilku uzupełnień — zadam Ci kilka krótkich pytań.'
+      );
+
+      setTimeout(() => {
+        if (currentMissing.length > 0) {
+          askNext();
+        } else {
+          addAIMessage('Wszystkie pola są już wypełnione. Brief jest kompletny!');
+          showComplete();
+        }
+      }, 700);
+    }
+
+    function askNext(prefixMsg) {
+      if (currentMissing.length === 0) {
+        addAIMessage('Dziękuję za wszystkie odpowiedzi!');
+        showComplete();
+        return;
+      }
+      fieldConversation = [];   // reset history for new field
+
+      const field  = currentMissing[0];
+      const isList = BRIEF_SCHEMA.find(s => s.field === field.field)?.type === 'list';
+      const hint   = isList
+        ? ' <span style="font-size:0.78rem;color:#555">(możesz podać kilka, oddzielonych przecinkami)</span>'
+        : '';
+      const questionText = (prefixMsg ? prefixMsg + ' ' : '') + field.question + hint;
+
+      // Track this question in conversation history
+      fieldConversation.push({ role: 'assistant', content: field.question });
+
+      addAIMessage(questionText, true);
+      updateInputPlaceholder(isList);
+    }
+
+    function updateInputPlaceholder(isList) {
+      document.getElementById('chat-input').placeholder = isList
+        ? 'Np. Instagram, LinkedIn, e-mail…'
+        : 'Wpisz odpowiedź…';
+    }
+
+    function renderSidebar() {
+      const list    = document.getElementById('brief-progress-list');
+      const missing = new Set(currentMissing.map(f => f.field));
+      const current = currentMissing[0]?.field;
+      list.innerHTML = BRIEF_SCHEMA.map(({ field, label }) => {
+        const cls = missing.has(field)
+          ? (field === current ? 'progress-current' : 'progress-missing')
+          : 'progress-done';
+        const icon = cls === 'progress-done' ? '✓' : (cls === 'progress-current' ? '◉' : '○');
+        return `<div class="progress-item ${cls}">
+          <span class="progress-icon">${icon}</span><span>${label}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function addAIMessage(html, focusInput) {
+      if (html == null) return;   // guard against undefined/null
+      const msgs = document.getElementById('chat-messages');
+
+      // typing indicator
+      const typing = document.createElement('div');
+      typing.className = 'typing-wrap';
+      typing.innerHTML = `
+        <div class="chat-avatar">A</div>
+        <div class="typing-bubble">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>`;
+      msgs.appendChild(typing);
+      msgs.scrollTop = msgs.scrollHeight;
+
+      setTimeout(() => {
+        typing.remove();
+        const div = document.createElement('div');
+        div.className = 'chat-msg chat-msg-ai';
+        div.innerHTML = `<div class="chat-avatar">A</div><div class="chat-bubble">${html}</div>`;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+        if (focusInput) document.getElementById('chat-input').focus();
+      }, 600);
+    }
+
+    function addUserMessage(text) {
+      const msgs = document.getElementById('chat-messages');
+      const div  = document.createElement('div');
+      div.className = 'chat-msg chat-msg-user';
+      div.innerHTML = `<div class="chat-bubble">${escapeHtml(text)}</div>`;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    async function sendChatAnswer() {
+      const input  = document.getElementById('chat-input');
+      const answer = input.value.trim();
+      if (!answer || currentMissing.length === 0) return;
+
+      const field = currentMissing[0];
+      input.value = '';
+      input.style.height = '';
+      document.getElementById('btn-chat-send').disabled = true;
+
+      addUserMessage(answer);
+
+      // Append this user turn to the field-level conversation history
+      fieldConversation.push({ role: 'user', content: answer });
+
+      try {
+        const res  = await fetch('/chat_answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brief: currentBrief,
+            field: field.field,
+            conversation_history: fieldConversation,
+          })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          // Roll back the user turn we already pushed so retry works cleanly
+          fieldConversation.pop();
+          const detail = data.error ? ` (${data.error})` : '';
+          addAIMessage(`Ups, coś poszło nie tak po mojej stronie${detail}. Spróbuj jeszcze raz!`, true);
+          return;
+        }
+
+        const status = data.status;
+
+        if (status === 'accepted') {
+          currentBrief   = data.brief;
+          currentMissing = data.missing_fields;
+          renderSidebar();
+
+          setTimeout(() => {
+            if (currentMissing.length > 0) {
+              // Show AI acceptance message, then ask next field
+              addAIMessage(data.response, false);
+              setTimeout(() => askNext(), 900);
+            } else {
+              addAIMessage(data.response);
+              setTimeout(showComplete, 800);
+            }
+          }, 200);
+
+        } else {
+          // needs_more or invalid — stay on current field, record AI follow-up
+          fieldConversation.push({ role: 'assistant', content: data.response });
+          setTimeout(() => {
+            addAIMessage(data.response, true);
+          }, 200);
+        }
+
+      } catch (err) {
+        addAIMessage('Wystąpił błąd połączenia. Spróbuj ponownie.');
+      } finally {
+        document.getElementById('btn-chat-send').disabled = false;
+      }
+    }
+
+    function showComplete() {
+      document.getElementById('chat-input-bar').style.display = 'none';
+      const msgs = document.getElementById('chat-messages');
+      const card = document.createElement('div');
+      card.className = 'brief-complete-card';
+      card.innerHTML = `
+        <h3>Brief kompletny ✓</h3>
+        <p>Wszystkie pola zostały wypełnione. Możesz pobrać brief lub wrócić do strony głównej.</p>
+        <button class="btn btn-primary" onclick="downloadBrief()" style="margin-right:10px;">Pobierz JSON &gt;</button>
+        <button class="btn btn-ghost" onclick="closeChatOverlay()">Wróć</button>
+      `;
+      msgs.appendChild(card);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function downloadBrief() {
+      const blob = new Blob([JSON.stringify(currentBrief, null, 2)], { type: 'application/json' });
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = 'brief.json';
+      a.click();
+    }
+
+    function closeChatOverlay() {
+      document.getElementById('chat-overlay').style.display = 'none';
+      document.getElementById('chat-input-bar').style.display = 'flex';
+      document.body.style.overflow = '';
+    }
+
+    // Wire up chat controls
+    document.getElementById('btn-chat-close').addEventListener('click', closeChatOverlay);
+
+    document.getElementById('btn-chat-send').addEventListener('click', sendChatAnswer);
+
+    document.getElementById('chat-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatAnswer();
+      }
+    });
+
+    // Auto-grow textarea
+    document.getElementById('chat-input').addEventListener('input', function () {
+      this.style.height = '';
+      this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+    });
+    // ── End chat logic ────────────────────────────────
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
