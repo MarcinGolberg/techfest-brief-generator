@@ -25,3 +25,4 @@ let briefPanelMode          = 'brief'; // 'brief' | 'document'
 let fieldConversation       = [];      // [{role, content}] for the current field only
 let invalidStreak           = 0;       // consecutive "invalid" AI responses for current field
 let chatMode                = 'filling'; // 'filling' | 'editing'
+let briefHistory            = []; // [{type, timestamp, title, fieldLabel, fieldValue}]

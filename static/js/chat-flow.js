@@ -10,11 +10,18 @@ function resetGeneratedArtifacts() {
 
 function startChatMode(data) {
   resetGeneratedArtifacts();
+  briefHistory        = [];
   currentBrief        = data.brief;
   currentMissing      = data.missing_fields || [];
   currentSources      = data.sources || [];
   currentCombinedText = data.combined_text || '';
   chatMode            = 'filling';
+
+  const foundCount = BRIEF_SCHEMA.filter(s => {
+    const v = currentBrief[s.field];
+    return v && (Array.isArray(v) ? v.length > 0 : String(v).trim());
+  }).length;
+  addHistoryEntry({ type: 'fields_found', title: `Znaleziono informacje (${foundCount}/${BRIEF_SCHEMA.length} pól)`, briefSnapshot: { ...currentBrief }, missingSnapshot: currentMissing.map(m => ({ ...m })) });
 
   const overlay = document.getElementById('chat-overlay');
   const label   = document.getElementById('chat-product-label');
@@ -116,6 +123,14 @@ async function sendChatAnswer() {
       currentMissing = payload.missing_fields ?? [];
       if (payload.sources)       currentSources      = payload.sources;
       if (payload.combined_text) currentCombinedText = payload.combined_text;
+
+      const filledSchema = BRIEF_SCHEMA.find(s => s.field === justFilled);
+      if (filledSchema) {
+        const newVal     = currentBrief[justFilled];
+        const displayVal = Array.isArray(newVal) ? newVal.join(', ') : newVal;
+        addHistoryEntry({ type: 'field_changed', title: `Zmiana w wartości: ${filledSchema.label}`, fieldLabel: filledSchema.label, fieldValue: displayVal, briefSnapshot: { ...currentBrief }, missingSnapshot: currentMissing.map(m => ({ ...m })) });
+      }
+
       renderSidebar();
       setTimeout(() => flashBriefField(justFilled), 150);
 
@@ -223,10 +238,18 @@ async function submitManualInput(btn) {
       throw new Error(data.error || `HTTP ${res.status}`);
     }
 
-    const justFilled = fieldName;
+    const justFilled   = fieldName;
     resetGeneratedArtifacts();
     currentBrief   = data.brief;
     currentMissing = data.missing_fields;
+
+    const manualSchema = BRIEF_SCHEMA.find(s => s.field === justFilled);
+    if (manualSchema) {
+      const newVal     = currentBrief[justFilled];
+      const displayVal = Array.isArray(newVal) ? newVal.join(', ') : newVal;
+      addHistoryEntry({ type: 'field_changed', title: `Zmiana w wartości: ${manualSchema.label}`, fieldLabel: manualSchema.label, fieldValue: displayVal, briefSnapshot: { ...currentBrief }, missingSnapshot: currentMissing.map(m => ({ ...m })) });
+    }
+
     renderSidebar();
     setTimeout(() => flashBriefField(justFilled), 150);
 
@@ -338,7 +361,15 @@ async function sendEditPrompt() {
     renderSidebar();
     renderBriefPanelHeader();
 
-    (data.updated_fields || []).forEach(f => setTimeout(() => flashBriefField(f), 150));
+    (data.updated_fields || []).forEach(f => {
+      setTimeout(() => flashBriefField(f), 150);
+      const editSchema = BRIEF_SCHEMA.find(s => s.field === f);
+      if (editSchema) {
+        const newVal     = currentBrief[f];
+        const displayVal = Array.isArray(newVal) ? newVal.join(', ') : newVal;
+        addHistoryEntry({ type: 'field_changed', title: `Zmiana w wartości: ${editSchema.label}`, fieldLabel: editSchema.label, fieldValue: displayVal, briefSnapshot: { ...currentBrief }, missingSnapshot: currentMissing.map(m => ({ ...m })) });
+      }
+    });
     addAIMessage(data.response || 'Zaktualizowałam brief.', true);
 
     // If new missing fields appeared, switch back to filling mode
@@ -362,6 +393,7 @@ async function sendEditPrompt() {
 }
 
 function closeChatOverlay() {
+  briefHistory = [];
   document.getElementById('chat-overlay').style.display = 'none';
 
   // Reset split layout
