@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+_PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+
 def get_azure_client():
     endpoint = os.getenv("AZURE_LLM_ENDPOINT")
     api_key = os.getenv("AZURE_LLM_API_KEY")
@@ -32,7 +34,7 @@ def extract_brief_from_text(input_text: str) -> str:
     client = get_azure_client()
     deployment = _get_deployment()
 
-    with open("prompts/extract_brief.txt", "r", encoding="utf-8") as f:
+    with open(os.path.join(_PROMPTS_DIR, "extract_brief.txt"), "r", encoding="utf-8") as f:
         prompt_template = f.read()
 
     prompt = prompt_template.replace("{{input_text}}", input_text)

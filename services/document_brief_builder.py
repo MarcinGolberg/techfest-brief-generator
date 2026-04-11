@@ -1,8 +1,11 @@
 import json
+import os
 from services.ai_service import extract_structured_text
 
+_PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+
 def build_document_brief(brief: dict, sources: list, combined_text: str) -> dict:
-    with open("prompts/enrich_brief.txt", "r", encoding="utf-8") as f:
+    with open(os.path.join(_PROMPTS_DIR, "enrich_brief.txt"), "r", encoding="utf-8") as f:
         template = f.read()
 
     prompt = (
