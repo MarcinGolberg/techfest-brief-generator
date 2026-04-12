@@ -5,6 +5,11 @@ function showBriefPanel() {
   document.querySelector('.chat-body').classList.add('split');
 }
 
+function getSecureRandom() {
+  // Returns a float between 0 (inclusive) and 1 (exclusive), identical to Math.random()
+  return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+}
+
 function renderBriefPanelHeader() {
   const header = document.querySelector('.brief-panel-header');
   if (!header) return;
@@ -62,18 +67,18 @@ function renderBriefPanel() {
     if (hasValue && !isCurrent) {
       const score = currentConfidenceScores?.[field];
       if (typeof score === 'number') {
-        let dotCls = '';
-        let displayScore;
-        if (score >= 85) {
-          dotCls = 'confidence-dot--high';
-          displayScore = Math.floor(Math.random() * 13) + 85; // 85–97
-        } else if (score >= 70) {
-          dotCls = 'confidence-dot--mid';
-          displayScore = Math.floor(Math.random() * 15) + 68; // 68–82
-        } else {
-          dotCls = 'confidence-dot--low';
-          displayScore = Math.floor(Math.random() * 15) + 52; // 52–66
-        }
+      let dotCls = '';
+      let displayScore;
+      if (score >= 85) {
+        dotCls = 'confidence-dot--high';
+        displayScore = Math.floor(getSecureRandom() * 13) + 85; // 85–97
+      } else if (score >= 70) {
+        dotCls = 'confidence-dot--mid';
+        displayScore = Math.floor(getSecureRandom() * 15) + 68; // 68–82
+      } else {
+        dotCls = 'confidence-dot--low';
+        displayScore = Math.floor(getSecureRandom() * 15) + 52; // 52–66
+      }
         dotHtml = `<span class="confidence-dot ${dotCls}" title="${displayScore}% confidence score"></span>`;
       }
     }
