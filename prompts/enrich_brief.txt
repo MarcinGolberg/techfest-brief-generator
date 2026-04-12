@@ -1,6 +1,6 @@
-You are transforming a structured marketing brief into a polished document brief.
+Jesteś asystentem przekształcającym ustrukturyzowany brief marketingowy w dopracowany dokument briefu.
 
-Return ONLY valid JSON with these fields:
+Zwróć WYŁĄCZNIE poprawny JSON z następującymi polami:
 - title
 - executive_summary
 - background
@@ -15,20 +15,54 @@ Return ONLY valid JSON with these fields:
 - key_points
 - sources_summary
 
-Rules:
-- Use Polish.
-- Use only the provided input.
-- Do not invent unsupported facts.
-- If something is missing, keep it concise and neutral.
-- "mandatories", "branding_guidance", and "key_points" must always be arrays of strings.
-- "executive_summary" should be short and useful for quick reading.
-- "sources_summary" should briefly describe what sources were used.
+Definicje pól:
+- title: tytuł lub robocza nazwa projektu, kampanii lub wydarzenia.
+- executive_summary: krótkie, rzeczowe podsumowanie całego briefu — przydatne do szybkiego przeglądu przez decydentów.
+- background: kontekst biznesowy, rynkowy lub sytuacyjny, z którego wynika potrzeba działania.
+- objective: cel lub cele projektu — co ma zostać osiągnięte.
+- target_group: precyzyjny opis grupy docelowej — demografia, psychografia, role lub segmenty odbiorców.
+- issue: kluczowy problem, wyzwanie lub bariera, którą projekt ma rozwiązać.
+- insight: głębszy wgląd w potrzeby, motywacje lub zachowania grupy docelowej, który uzasadnia proponowane podejście.
+- creative_challenge: sformułowanie wyzwania kreatywnego — „jak sprawić, żeby..." — będące punktem wyjścia do prac twórczych.
+- mandatories: obowiązkowe elementy, wymagania formalne lub ograniczenia, których należy bezwzględnie przestrzegać (tablica stringów).
+- graphic_asset_type: rodzaj lub format materiałów graficznych, które mają zostać przygotowane.
+- branding_guidance: wytyczne brandingowe, wskazówki dotyczące identyfikacji wizualnej lub tonacji wizualnej (tablica stringów).
+- key_points: najważniejsze punkty lub ustalenia briefu do zapamiętania (tablica stringów).
+- sources_summary: krótki opis źródeł użytych do opracowania briefu.
 
-Input brief:
+Zasady:
+- Używaj języka polskiego.
+- Korzystaj wyłącznie z dostarczonych danych wejściowych.
+- Nie wymyślaj informacji, które nie wynikają z materiałów.
+- Jeśli czegoś brakuje, zachowaj zwięzłość i neutralność — nie wypełniaj pól na siłę.
+- Pola "mandatories", "branding_guidance" i "key_points" muszą zawsze być tablicami stringów.
+- "executive_summary" powinno być krótkie (2–4 zdania) i użyteczne do szybkiego przeglądu.
+- "sources_summary" powinno krótko opisywać, jakie źródła zostały użyte i co z nich wynika.
+- Nie duplikuj tej samej treści w wielu polach — wybierz pole najbardziej pasujące.
+- Nie twórz nowych pól ani nie zwracaj żadnych kluczy spoza listy powyżej.
+
+Wzorzec wyjścia:
+{
+  "title": "",
+  "executive_summary": "",
+  "background": "",
+  "objective": "",
+  "target_group": "",
+  "issue": "",
+  "insight": "",
+  "creative_challenge": "",
+  "mandatories": [],
+  "graphic_asset_type": "",
+  "branding_guidance": [],
+  "key_points": [],
+  "sources_summary": ""
+}
+
+Wejściowy brief:
 {{brief_json}}
 
-Input sources:
+Wejściowe źródła:
 {{sources_json}}
 
-Combined text:
+Połączony tekst:
 {{combined_text}}

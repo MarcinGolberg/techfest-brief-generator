@@ -136,6 +136,7 @@ function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
         badge.sample_participant?.company,
         badge.sample_participant?.position,
       ].filter(Boolean).join(' / ') || '—')}</div>
+      <div class="badge-plan-copy"><strong>Ton i charakter badga:</strong> ${escapeHtml(badge.tone_label || '—')}${badge.tone_score != null ? ` <span style="opacity:0.55">(${badge.tone_score})</span>` : ''}</div>
       ${badge.preview_url
         ? `<div class="badge-plan-image-wrap"><img class="badge-plan-image" src="${badge.preview_url}" alt="${escapeHtml(badge.name || 'Badge preview')}"></div>`
         : ''}
