@@ -18,7 +18,6 @@ test_venv/
 # These should be handled via Docker volumes at runtime.
 uploads/
 generated/
-images/
 
 # Tests (Optional but recommended)
 # Unless you are actively running pytest DURING your Docker build step, 
