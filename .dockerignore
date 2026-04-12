@@ -20,7 +20,7 @@ uploads/
 generated/
 
 # Tests (Optional but recommended)
-# Unless you are actively running pytest DURING your Docker build step, 
+# Unless you are actively running pytest DURING your Docker build step,
 # production containers do not need your test files.
 tests/
 

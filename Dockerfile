@@ -27,6 +27,7 @@ COPY --chown=root:root --chmod=0555 services/ ./services/
 COPY --chown=root:root --chmod=0555 static/ ./static/
 COPY --chown=root:root --chmod=0555 templates/ ./templates/
 COPY --chown=root:root --chmod=0555 prompts/ ./prompts/
+COPY --chown=root:root --chmod=0555 images/ ./images/
 COPY --chown=root:root --chmod=0555 app.py file_parser.py ./
 
 # 6.5 Create dynamic directories and grant write access to the runtime user
