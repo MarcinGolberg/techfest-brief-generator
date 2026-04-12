@@ -1139,15 +1139,15 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     logo_panel_padding_v = 20
     logo_x = center_x - (logo.width // 2)
     logo_y = logo_area_top + (logo_area_bottom - logo_area_top - logo.height) // 2
-    draw.rectangle(
-        (
-            logo_x - logo_panel_padding_h,
-            logo_y - logo_panel_padding_v,
-            logo_x + logo.width + logo_panel_padding_h,
-            logo_y + logo.height + logo_panel_padding_v,
-        ),
-        fill=(255, 255, 255),
-    )
+    # draw.rectangle(
+    #     (
+    #         logo_x - logo_panel_padding_h,
+    #         logo_y - logo_panel_padding_v,
+    #         logo_x + logo.width + logo_panel_padding_h,
+    #         logo_y + logo.height + logo_panel_padding_v,
+    #     ),
+    #     fill=(255, 255, 255),
+    # )
     canvas.paste(logo, (logo_x, logo_y), logo)
 
     output = io.BytesIO()
