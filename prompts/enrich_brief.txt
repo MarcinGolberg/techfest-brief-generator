@@ -113,11 +113,39 @@ Output contract:
 - All required fields must be present.
 - The output must be valid JSON.
 
-Input brief:
+Zasady:
+- Używaj języka polskiego.
+- Korzystaj wyłącznie z dostarczonych danych wejściowych.
+- Nie wymyślaj informacji, które nie wynikają z materiałów.
+- Jeśli czegoś brakuje, zachowaj zwięzłość i neutralność — nie wypełniaj pól na siłę.
+- Pola "mandatories", "branding_guidance" i "key_points" muszą zawsze być tablicami stringów.
+- "executive_summary" powinno być krótkie (2–4 zdania) i użyteczne do szybkiego przeglądu.
+- "sources_summary" powinno krótko opisywać, jakie źródła zostały użyte i co z nich wynika.
+- Nie duplikuj tej samej treści w wielu polach — wybierz pole najbardziej pasujące.
+- Nie twórz nowych pól ani nie zwracaj żadnych kluczy spoza listy powyżej.
+
+Wzorzec wyjścia:
+{
+  "title": "",
+  "executive_summary": "",
+  "background": "",
+  "objective": "",
+  "target_group": "",
+  "issue": "",
+  "insight": "",
+  "creative_challenge": "",
+  "mandatories": [],
+  "graphic_asset_type": "",
+  "branding_guidance": [],
+  "key_points": [],
+  "sources_summary": ""
+}
+
+Wejściowy brief:
 {{brief_json}}
 
-Input sources:
+Wejściowe źródła:
 {{sources_json}}
 
-Combined text:
+Połączony tekst:
 {{combined_text}}

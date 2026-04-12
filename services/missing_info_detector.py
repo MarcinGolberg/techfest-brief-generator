@@ -1,26 +1,54 @@
 from services.brief_schema import FIELD_RULES
 
 GENERIC_VALUES = {
+    # angielskie
     "n/a",
     "none",
     "unknown",
     "not provided",
+    "null",
+    "tbd",
+    "to be determined",
+    # polskie
     "brak",
     "nie podano",
-    "null"
+    "nie dotyczy",
+    "nieznane",
+    "do ustalenia",
+    "brak danych",
+    "nie określono",
+    "brak informacji",
 }
 
 AMBIGUOUS_VALUES = {
+    # angielskie
     "all",
     "everyone",
     "general",
     "online",
     "social media",
     "good results",
-    "młodzi ludzie",
+    "various",
+    "multiple",
+    "many",
+    "different",
+    # polskie
     "wszyscy",
+    "wszyscy klienci",
+    "wszyscy odbiorcy",
+    "szeroka publiczność",
+    "ogólna publiczność",
+    "młodzi ludzie",
     "internet",
-    "dobre wyniki"
+    "dobre wyniki",
+    "dobre rezultaty",
+    "lepsze wyniki",
+    "więcej klientów",
+    "różne kanały",
+    "różne",
+    "wiele",
+    "standardowe",
+    "typowe",
 }
 
 def evaluate_string(value):
