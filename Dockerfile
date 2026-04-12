@@ -29,6 +29,13 @@ COPY --chown=root:root --chmod=0555 templates/ ./templates/
 COPY --chown=root:root --chmod=0555 prompts/ ./prompts/
 COPY --chown=root:root --chmod=0555 app.py file_parser.py ./
 
+# 6.5 Create dynamic directories and grant write access to the runtime user
+# This allows the app to save uploads and generated files without giving it
+# permission to modify the source code.
+RUN mkdir -p /app/generated /app/uploads && \
+    chown -R team4user:team4user /app/generated /app/uploads && \
+    chmod -R 0755 /app/generated /app/uploads
+
 # 7. Container Health Monitoring
 # Scanners require this to ensure the orchestrator can monitor app health
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
