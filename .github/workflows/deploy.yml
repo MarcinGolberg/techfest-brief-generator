@@ -57,7 +57,7 @@ jobs:
           python-version: '3.11'
       - run: |
           pip install cyclonedx-bom
-          cyclonedx-py environment --output-format JSON --output-file sbom.json
+          cyclonedx-py -e --format json -o sbom.json
       - uses: actions/upload-artifact@v4
         with:
           name: sbom-cyclonedx
@@ -72,6 +72,7 @@ jobs:
           SBOM_BASE64=$(base64 -w 0 sbom.json)
           PAYLOAD=$(python3 -c "import json; print(json.dumps({'project': '$DEPENDENCYTRACK_PROJECT_UUID', 'bom': '$SBOM_BASE64'}))")
           curl -s -X PUT -H "Content-Type: application/json" -H "X-Api-Key: ${DEPENDENCYTRACK_API_KEY}" -d "${PAYLOAD}" "${DEPENDENCYTRACK_URL}/api/v1/bom"
+          
 
   sonarqube-analysis:
     name: "Quality Gate — SonarQube"
