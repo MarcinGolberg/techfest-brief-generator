@@ -15,7 +15,7 @@ jobs:
   # JOBS 1, 2, 3 (Secret Scan, Vulnerability Scan, SBOM) remain unchanged.
   secret-scan:
     name: "Secret Scanning (Gitleaks)"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +27,7 @@ jobs:
 
   vulnerability-scan:
     name: "Vulnerability Scan (Bandit + Safety)"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     needs: secret-scan
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
 
   sbom-generation:
     name: "SBOM Generation & Upload (CycloneDX)"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     needs: secret-scan
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
 
   sonarqube-analysis:
     name: "Quality Gate — SonarQube"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     needs: [ vulnerability-scan, sbom-generation ]
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
   # ============================================================
   build-and-push-docker:
     name: "Docker Build, Scan & Push"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     needs: sonarqube-analysis
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prod')
     steps:
@@ -141,7 +141,7 @@ jobs:
   # ============================================================
   deploy:
     name: "Deploy Container to Azure App Service"
-    runs-on: hackathon-runner
+    runs-on: linux-big
     needs: build-and-push-docker
     steps:
       - name: Deploy to Azure Web App
