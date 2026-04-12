@@ -1,7 +1,31 @@
+# Git and IDE
 .git
 .github
+.idea
+
+# Python dependencies and cache
 __pycache__
 *.pyc
+*.pyo
+*.pyd
 .env
-venv
-test_venv
+venv/
+.venv/
+test_venv/
+
+# Local data and dynamic folders
+# You do NOT want local test files copied into your production image. 
+# These should be handled via Docker volumes at runtime.
+uploads/
+generated/
+images/
+
+# Tests (Optional but recommended)
+# Unless you are actively running pytest DURING your Docker build step, 
+# production containers do not need your test files.
+tests/
+
+# Documentation and config
+*.md
+.gitignore
+.dockerignore

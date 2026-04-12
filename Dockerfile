@@ -21,9 +21,13 @@ RUN pip install --no-cache-dir --upgrade pip wheel setuptools jaraco.context
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Copy application code WITH strict ownership
-# This tells scanners that root does not own the app files
-COPY --chown=root:root --chmod=0555 . .
+# 6. Copy ONLY the necessary application code WITH strict ownership
+# This maps exactly to your project tree to avoid copying .git, tests, or uploads
+COPY --chown=root:root --chmod=0555 services/ ./services/
+COPY --chown=root:root --chmod=0555 static/ ./static/
+COPY --chown=root:root --chmod=0555 templates/ ./templates/
+COPY --chown=root:root --chmod=0555 prompts/ ./prompts/
+COPY --chown=root:root --chmod=0555 app.py file_parser.py ./
 
 # 7. Container Health Monitoring
 # Scanners require this to ensure the orchestrator can monitor app health
@@ -35,4 +39,5 @@ USER team4user
 
 # 9. Expose and Start
 EXPOSE 8080
+# Make sure app.py defines a Flask/FastAPI instance named 'app'
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "600", "app:app"]

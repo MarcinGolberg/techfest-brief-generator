@@ -1,21 +1,21 @@
+# Environment and IDE
 .env
-
-.venv
 .venv/
-
-.env
-
-__pycache__/*
-*.pyc
+.idea/
 .DS_Store
 
-uploads/*
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
+# Dynamic / User-generated folders
+# We ignore the contents but keep the folder structure if needed
+uploads/*
+!uploads/.gitkeep
 generated/*
+!generated/.gitkeep
 
 tests/*
-
-.idea
-.idea/
-
-.__pycache__/
+tests
