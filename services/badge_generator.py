@@ -1,3 +1,4 @@
+import colorsys
 import io
 import json
 import math
@@ -31,6 +32,7 @@ BRAND_GUIDELINES = {
 }
 
 LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo-white.png")
+LOGO_PATH_DARK = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo.png")
 BADGE_SIZE = (900, 1200)
 SAFE_MARGIN = 56
 ROLE_STRIP_WIDTH = 42
@@ -434,13 +436,13 @@ def _load_font(size: int, bold: bool = False):
     return ImageFont.truetype(font_path, size=size)
 
 
-def _fit_logo(max_width: int, max_height: int) -> Image.Image:
-    if not os.path.exists(LOGO_PATH):
+def _fit_logo(max_width: int, max_height: int, path: str = LOGO_PATH) -> Image.Image:
+    if not os.path.exists(path):
         raise ValueError(
-            f"Nie znaleziono pliku logo Accenture pod ścieżką {LOGO_PATH}. "
-            "Przywróć plik Accenture-logo-white.png do katalogu team4/images."
+            f"Nie znaleziono pliku logo Accenture pod ścieżką {path}. "
+            "Przywróć plik logo do katalogu team4/images."
         )
-    logo = Image.open(LOGO_PATH).convert("RGBA")
+    logo = Image.open(path).convert("RGBA")
     return ImageOps.contain(logo, (max_width, max_height))
 
 
@@ -570,6 +572,117 @@ def _role_bar_style(role_id: str) -> Dict[str, str]:
 def _lerp_color(c1: tuple, c2: tuple, t: float) -> tuple:
     t = max(0.0, min(1.0, t))
     return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+
+
+def _rgb_to_hls(rgb: tuple) -> tuple:
+    r, g, b = rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0
+    return colorsys.rgb_to_hls(r, g, b)
+
+
+def _hls_to_rgb(h: float, l: float, s: float) -> tuple:
+    r, g, b = colorsys.hls_to_rgb(h, max(0.0, min(1.0, l)), max(0.0, min(1.0, s)))
+    return (int(r * 255), int(g * 255), int(b * 255))
+
+
+def _apply_tone_to_color_sat_bright(rgb: tuple, tone: float) -> tuple:
+    """Modulate saturation and brightness of a color based on tone [0,1].
+
+    tone=0 (corporate) → keep as-is (dark, desaturated)
+    tone=1 (playful)   → push toward vivid: target L=0.60, target S=0.90
+
+    The HUE is never touched — the badge colour identity stays constant across
+    the corporate-playful axis.  Only energy and vividness change.
+    """
+    tone = max(0.0, min(1.0, tone))
+    h, l, s = _rgb_to_hls(rgb)
+    TARGET_L = 0.60
+    TARGET_S = 0.90
+    l_new = l + tone * max(0.0, TARGET_L - l)
+    s_new = s + tone * max(0.0, TARGET_S - s)
+    return _hls_to_rgb(h, l_new, s_new)
+
+
+def _apply_tone_to_gradient_stops(stops: List[tuple], tone: float) -> List[tuple]:
+    """Apply tone-based saturation/brightness modulation to every gradient stop."""
+    return [(pos, _apply_tone_to_color_sat_bright(color, tone)) for pos, color in stops]
+
+
+def _inject_industry_hue_into_stops(stops: List[tuple], industry_rgb: tuple) -> List[tuple]:
+    """Replace the hue in each gradient stop with the industry colour's hue,
+    preserving each stop's original lightness and saturation structure."""
+    ind_h, _, ind_s = _rgb_to_hls(industry_rgb)
+    result = []
+    for pos, color in stops:
+        stop_hls = _rgb_to_hls(color)
+        l, s = stop_hls[1], stop_hls[2]
+        # If the stop is near-achromatic, borrow a fraction of the industry saturation
+        effective_s = s if s > 0.05 else ind_s * 0.4
+        result.append((pos, _hls_to_rgb(ind_h, l, effective_s)))
+    return result
+
+
+def _hex_list_to_gradient_stops(hex_rgb_list: List[tuple]) -> List[tuple]:
+    """Distribute a list of (R,G,B) colors evenly as gradient stops [0.0 … 1.0]."""
+    n = len(hex_rgb_list)
+    if n == 1:
+        return [(0.0, hex_rgb_list[0]), (1.0, hex_rgb_list[0])]
+    return [(i / (n - 1), hex_rgb_list[i]) for i in range(n)]
+
+
+def _sample_region_luminance(canvas: Image.Image, x1: int, y1: int, x2: int, y2: int) -> float:
+    """Compute the average perceptual luminance (0–1) of a canvas region.
+
+    Uses the sRGB relative-luminance formula: 0.2126R + 0.7152G + 0.0722B.
+    Downsamples to 8×8 before averaging so the call is fast regardless of region size.
+    """
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(canvas.width, x2)
+    y2 = min(canvas.height, y2)
+    if x2 <= x1 or y2 <= y1:
+        return 0.0
+    region = canvas.crop((x1, y1, x2, y2)).convert("RGB")
+    thumb = region.resize((8, 8), Image.Resampling.LANCZOS)
+    pixels = list(thumb.getdata())
+    if not pixels:
+        return 0.0
+    total = sum(
+        0.2126 * (r / 255.0) + 0.7152 * (g / 255.0) + 0.0722 * (b / 255.0)
+        for r, g, b in pixels
+    )
+    return total / len(pixels)
+
+
+def _adaptive_palette(luminance: float) -> dict:
+    """Return text/decoration colours that maximally contrast the given background luminance.
+
+    luminance > 0.45 → bright background → dark text palette
+    luminance ≤ 0.45 → dark  background → light text palette
+    """
+    if luminance > 0.45:
+        return {
+            "primary":   (12, 12, 22),
+            "secondary": (45, 40, 65),
+            "shadow":    (230, 228, 242),
+            "separator": (75, 65, 105),
+        }
+    else:
+        return {
+            "primary":   (255, 255, 255),
+            "secondary": (215, 205, 238),
+            "shadow":    (8, 8, 18),
+            "separator": (175, 155, 215),
+        }
+
+
+def _adapt_logo_for_background(luminance: float, max_width: int, max_height: int) -> Image.Image:
+    """Load the correct Accenture logo variant based on background luminance.
+
+    luminance > 0.45 (bright background) → Accenture-logo.png        (full-colour / dark)
+    luminance ≤ 0.45 (dark  background)  → Accenture-logo-white.png  (white variant)
+    """
+    path = LOGO_PATH_DARK if luminance > 0.45 else LOGO_PATH
+    return _fit_logo(max_width, max_height, path)
 
 
 def _interpolate_gradient_stops(stops: List[tuple], t: float) -> tuple:
@@ -877,25 +990,27 @@ def _detect_tone(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> float
         return _detect_tone_keyword_fallback(brief, document_brief)
 
 
-def _lerp_gradient_stops(
-    stops_a: List[tuple], stops_b: List[tuple], t: float
-) -> List[tuple]:
-    """Lerp between two gradient stop lists at the union of their positions."""
-    positions = sorted({p for p, _ in stops_a} | {p for p, _ in stops_b})
-    result = []
-    for pos in positions:
-        color_a = _interpolate_gradient_stops(stops_a, pos)
-        color_b = _interpolate_gradient_stops(stops_b, pos)
-        result.append((pos, _lerp_color(color_a, color_b, t)))
-    return result
+def _apply_tone_to_theme(
+    theme_info: Dict[str, Any],
+    tone: float,
+    industry_colors: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Resolve the corporate palette for the given tone [0, 1].
 
+    Color identity (hue) is preserved across the full tone range.
+    Only saturation and brightness are modulated:
+        tone=0  → dark, desaturated  (corporate feel)
+        tone=1  → vivid, bright      (playful feel)
 
-def _apply_tone_to_theme(theme_info: Dict[str, Any], tone: float) -> Dict[str, Any]:
-    """Blend the corporate and playful palette variants based on tone [0, 1].
+    If industry_colors are supplied (from _extract_industry_colors), the
+    primary industry hue is injected into the base gradient stops before
+    the saturation/brightness modulation, so the badge reflects the
+    industry's psychological color identity.
 
-    Returns a flat dict with resolved values ready for gradient building and
-    badge composition.  tone_cap clips the maximum allowed playfulness for
-    inherently formal domains.
+    Structural elements (dynamism, blob_configs, light_streak) still blend
+    between the corporate and playful extremes as before.
+
+    tone_cap clips the maximum playfulness for inherently formal domains.
     """
     tone = max(0.0, min(1.0, tone))
     tone = min(tone, theme_info.get("tone_cap", 1.0))
@@ -903,22 +1018,39 @@ def _apply_tone_to_theme(theme_info: Dict[str, Any], tone: float) -> Dict[str, A
     corp = theme_info["corporate"]
     play = theme_info["playful"]
 
-    # Gradient stops — lerp across the union of stop positions
-    gradient_stops = _lerp_gradient_stops(corp["gradient_stops"], play["gradient_stops"], tone)
-
-    # Blobs — switch at the midpoint (blending blob positions makes no sense visually)
-    if tone <= 0.50:
-        blob_colors = corp["blob_colors"]
-        blob_configs = corp["blob_configs"]
+    # ── Gradient stops ────────────────────────────────────────────────────────
+    # Priority:
+    #   1. GPT-4o multi-color palette  → diverse, industry-specific, rich gradient
+    #   2. Industry primary hue inject → single-hue variant (fallback)
+    #   3. Corporate palette           → default dark theme
+    # In all cases tone modulates saturation + brightness (never the hue).
+    gpt_stops = (industry_colors or {}).get("gradient_stops_rgb")
+    if gpt_stops:
+        base_stops = _hex_list_to_gradient_stops(gpt_stops)
+    elif industry_colors and industry_colors.get("primary"):
+        base_stops = _inject_industry_hue_into_stops(corp["gradient_stops"], industry_colors["primary"])
     else:
-        blob_colors = play["blob_colors"]
-        blob_configs = play["blob_configs"]
+        base_stops = corp["gradient_stops"]
+    gradient_stops = _apply_tone_to_gradient_stops(base_stops, tone)
 
+    # ── Blob colours: use corporate hue (or industry secondary) + tone sat/bright
+    base_blob_colors = corp["blob_colors"]
+    if industry_colors and industry_colors.get("secondary"):
+        base_blob_colors = [industry_colors["secondary"]] * len(base_blob_colors)
+    blob_colors = [_apply_tone_to_color_sat_bright(c, tone) for c in base_blob_colors]
+
+    # ── Blob positions switch at midpoint (structural, not colour-related) ───
+    blob_configs = corp["blob_configs"] if tone <= 0.50 else play["blob_configs"]
+
+    # ── Structural elements — linear blend as before ─────────────────────────
     dynamism = corp["dynamism"] + (play["dynamism"] - corp["dynamism"]) * tone
     style = play["style"] if tone > 0.50 else corp["style"]
     light_streak = play["light_streak"] if tone > 0.60 else corp["light_streak"]
-    text_accent = _lerp_color(corp["text_accent"], play["text_accent"], tone)
-    separator_color = _lerp_color(corp["separator_color"], play["separator_color"], tone)
+
+    # Text / separator accents: sat+bright modulated from corporate base
+    text_accent = _apply_tone_to_color_sat_bright(corp["text_accent"], 0.4 + 0.6 * tone)
+    separator_color = _apply_tone_to_color_sat_bright(corp["separator_color"], 0.4 + 0.6 * tone)
+
     prompt_hint = play["prompt_hint"] if tone > 0.50 else corp["prompt_hint"]
 
     return {
@@ -933,6 +1065,7 @@ def _apply_tone_to_theme(theme_info: Dict[str, Any], tone: float) -> Dict[str, A
         "separator_color": separator_color,
         "prompt_hint": prompt_hint,
         "tone": tone,
+        "industry_colors": industry_colors,
     }
 
 
@@ -975,6 +1108,14 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     canvas = Image.alpha_composite(canvas_rgb.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
+    # ── Adaptive colour palette based on actual background luminance ──────────
+    # Sample BEFORE any text/shapes are drawn so colours reflect the real bg.
+    # Two zones: content (title → separator) and logo strip (below role bar).
+    _content_lum = _sample_region_luminance(canvas, 0, 0, width, int(height * 0.68))
+    _logo_lum    = _sample_region_luminance(canvas, 0, int(height * 0.78), width, height)
+    text_pal     = _adaptive_palette(_content_lum)
+    logo         = _adapt_logo_for_background(_logo_lum, max_width=480, max_height=180)
+
     # ── Extract badge data ────────────────────────────────────────────────────
     layout_data = badge.get("badgeLayoutData") or {}
     participant = layout_data.get("participant") or {}
@@ -1014,30 +1155,26 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     company_font = _load_font(48, bold=True)
     position_font = _load_font(42, bold=False)
     secondary_font = _load_font(30, bold=False)
-    logo = _fit_logo(max_width=480, max_height=180)
+    # logo is already built adaptively above (logo / logo_base)
 
     content_left = card_left + 72
     content_right = card_right - edge_width - 64
     content_width = content_right - content_left
     center_x = (content_left + content_right) // 2
 
-    # ── Conference name (field-accent colour on dark background) ─────────────
-    conference_fill = theme_info.get("text_accent", (210, 185, 255))
+    # ── Conference name ───────────────────────────────────────────────────────
     title_lines = _wrap_text(_truncate(conference_name, 80), draw, title_font, content_width)
     current_y = card_top + 86
     for line in title_lines[:2]:
         bbox = draw.textbbox((0, 0), line, font=title_font)
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
-        draw.text(
-            (center_x - (line_width // 2), current_y),
-            line,
-            font=title_font,
-            fill=conference_fill,
-        )
+        x = center_x - (line_width // 2)
+        draw.text((x + 2, current_y + 2), line, font=title_font, fill=text_pal["shadow"])
+        draw.text((x, current_y), line, font=title_font, fill=text_pal["primary"])
         current_y += line_height + 4
 
-    # ── Attendee name (white) ─────────────────────────────────────────────────
+    # ── Attendee name ─────────────────────────────────────────────────────────
     name_top = card_top + 270
     name_font, name_lines, _ = _fit_multiline_text(
         draw,
@@ -1054,7 +1191,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         center_x=center_x,
         top_y=name_top,
         font=name_font,
-        fill=(255, 255, 255),
+        fill=text_pal["primary"],
         line_spacing=10,
     )
 
@@ -1063,11 +1200,11 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     separator_half_width = min(220, content_width // 2 - 20)
     draw.line(
         (center_x - separator_half_width, separator_y, center_x + separator_half_width, separator_y),
-        fill=theme_info.get("separator_color", (175, 150, 215)),
+        fill=text_pal["separator"],
         width=2,
     )
 
-    # ── Company / position / secondary text (light on dark) ──────────────────
+    # ── Company / position / secondary text ──────────────────────────────────
     info_y = separator_y + 30
     if company_text:
         company_bbox = draw.textbbox((0, 0), company_text, font=company_font)
@@ -1076,20 +1213,18 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
             (center_x - (company_width // 2), info_y),
             company_text,
             font=company_font,
-            fill=(255, 255, 255),
+            fill=text_pal["primary"],
         )
         info_y += (company_bbox[3] - company_bbox[1]) + 10
 
     if position_text:
         position_bbox = draw.textbbox((0, 0), position_text, font=position_font)
         position_width = position_bbox[2] - position_bbox[0]
-        pos_accent = theme_info.get("text_accent", (195, 170, 240))
-        pos_fill = _lerp_color(pos_accent, (160, 145, 185), 0.45)
         draw.text(
             (center_x - (position_width // 2), info_y),
             position_text,
             font=position_font,
-            fill=pos_fill,
+            fill=text_pal["secondary"],
         )
         info_y += (position_bbox[3] - position_bbox[1]) + 8
 
@@ -1100,7 +1235,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
             (center_x - (secondary_width // 2), info_y + 4),
             secondary_text,
             font=secondary_font,
-            fill=(160, 140, 200),
+            fill=text_pal["secondary"],
         )
 
     # ── Role bar ──────────────────────────────────────────────────────────────
@@ -1304,6 +1439,11 @@ def _build_background_prompt(
     modifiers: List[str] = []
     if theme_info and theme_info.get("prompt_hint"):
         modifiers.append(theme_info["prompt_hint"])
+    # Enrich with industry color psychology rationale when available
+    if theme_info:
+        ind = theme_info.get("industry_colors") or {}
+        if ind.get("rationale"):
+            modifiers.append(f"color palette inspired by: {ind['rationale']}")
     if visual_keywords:
         modifiers.append(visual_keywords)
     if modifiers:
@@ -1355,6 +1495,73 @@ def _scan_brief_for_visual_keywords(brief: Dict[str, Any], document_brief: Dict[
         return cleaned if cleaned else ""
     except Exception:
         return ""
+
+
+def _extract_industry_colors(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Call GPT-4o acting as a color psychologist to extract industry-appropriate colors.
+
+    The model analyses the conference brief and returns 3 hex colors grounded in
+    color-psychology principles for that industry.  Colors are at medium brightness
+    so the tone system can darken them (corporate) or brighten them (playful)
+    without losing the industry's visual identity.
+
+    Returns a dict with 'primary', 'secondary', 'accent' as (R,G,B) tuples and
+    'rationale' as a string, or None on failure.
+    """
+    brief_summary = {
+        "conference_name": _first_non_empty(brief.get("product_or_service"), document_brief.get("title")),
+        "industry": _safe_text(brief.get("product_or_service")),
+        "scope": _safe_text(brief.get("scope_of_work")),
+        "target_audience": _safe_text(brief.get("target_audience")),
+        "description": _safe_text(document_brief.get("description")),
+        "target_group": _safe_text(document_brief.get("target_group")),
+    }
+
+    prompt = (
+        "You are a color psychologist specialising in corporate branding and industry color semantics. "
+        "Analyse the conference brief below and produce an industry-appropriate colour palette.\n\n"
+        "Apply color psychology: consider emotional associations, industry conventions, cultural expectations, "
+        "and the psychological impact on the target audience.\n\n"
+        "IMPORTANT for gradient_stops: provide 4–5 DIVERSE colors that create a rich, multi-hue gradient "
+        "flowing top-to-bottom on the badge background. They should be harmonious but visually varied "
+        "(not all the same hue). Use medium brightness — not near-black, not neon.\n\n"
+        "Return ONLY a valid JSON object — no markdown fences, no extra text:\n"
+        "{\n"
+        '  "primary": "#RRGGBB",\n'
+        '  "secondary": "#RRGGBB",\n'
+        '  "accent": "#RRGGBB",\n'
+        '  "gradient_stops": ["#RRGGBB", "#RRGGBB", "#RRGGBB", "#RRGGBB", "#RRGGBB"],\n'
+        '  "rationale": "1–2 sentence color psychology explanation"\n'
+        "}\n\n"
+        f"Conference brief:\n{json.dumps(brief_summary, ensure_ascii=False, indent=2)}"
+    )
+
+    try:
+        result = extract_structured_text(prompt)
+        json_match = re.search(r'\{.*\}', result.strip(), re.DOTALL)
+        if not json_match:
+            return None
+        data = json.loads(json_match.group())
+        colors: Dict[str, Any] = {}
+        for key in ("primary", "secondary", "accent"):
+            val = _safe_text(data.get(key, ""))
+            if re.match(r'^#[0-9A-Fa-f]{6}$', val):
+                colors[key] = _hex_to_rgb(val)
+        if len(colors) >= 2:
+            colors["rationale"] = _safe_text(data.get("rationale", ""))
+            # Parse multi-stop gradient colours
+            raw_stops = data.get("gradient_stops", [])
+            if isinstance(raw_stops, list):
+                parsed = [
+                    _hex_to_rgb(v) for v in raw_stops
+                    if isinstance(v, str) and re.match(r'^#[0-9A-Fa-f]{6}$', v.strip())
+                ]
+                if len(parsed) >= 3:
+                    colors["gradient_stops_rgb"] = parsed
+            return colors
+    except Exception:
+        pass
+    return None
 
 
 def _build_badge_layout_data(
@@ -1465,10 +1672,11 @@ def build_badge_generation_plan(
 ) -> Dict[str, Any]:
     conference_name = _first_non_empty(brief.get("product_or_service"), document_brief.get("title"), fallback="Accenture Conference")
 
-    # ── Detect theme + tone, then flatten to a single resolved palette ────────
+    # ── Detect theme + tone, extract industry colours, then resolve palette ──
     theme_info = _detect_conference_theme(brief, document_brief)
     tone = _detect_tone(brief, document_brief)
-    theme_info = _apply_tone_to_theme(theme_info, tone)
+    industry_colors = _extract_industry_colors(brief, document_brief)
+    theme_info = _apply_tone_to_theme(theme_info, tone, industry_colors)
     visual_keywords = _scan_brief_for_visual_keywords(brief, document_brief)
 
     role_variants = _extract_role_variants(
@@ -1533,6 +1741,7 @@ def build_badge_generation_plan(
             "theme_id": theme_info.get("theme_id", "general"),
             "theme_style": theme_info.get("style", "innovative"),
             "tone_score": round(theme_info.get("tone", 0.30), 2),
+            "industry_colors_rationale": (theme_info.get("industry_colors") or {}).get("rationale", ""),
         },
         "badges": badges,
     }
