@@ -122,6 +122,7 @@ async function sendChatAnswer() {
       resetGeneratedArtifacts();
       currentBrief   = payload.brief   ?? currentBrief;
       currentMissing = payload.missing_fields ?? [];
+      delete currentConfidenceScores[justFilled];
       if (payload.sources)       currentSources      = payload.sources;
       if (payload.combined_text) currentCombinedText = payload.combined_text;
 
@@ -243,6 +244,7 @@ async function submitManualInput(btn) {
     resetGeneratedArtifacts();
     currentBrief   = data.brief;
     currentMissing = data.missing_fields;
+    delete currentConfidenceScores[justFilled];
 
     const manualSchema = BRIEF_SCHEMA.find(s => s.field === justFilled);
     if (manualSchema) {
@@ -363,6 +365,7 @@ async function sendEditPrompt() {
     renderBriefPanelHeader();
 
     (data.updated_fields || []).forEach(f => {
+      delete currentConfidenceScores[f];
       setTimeout(() => flashBriefField(f), 150);
       const editSchema = BRIEF_SCHEMA.find(s => s.field === f);
       if (editSchema) {
