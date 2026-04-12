@@ -226,6 +226,87 @@ The server merges only the returned fields back into the brief, re-runs `detect_
 
 ---
 
+## Badge theming and tone detection
+
+Every generated badge adapts its visual character to the conference brief through a two-stage pipeline: **conference theme detection** followed by **tone scoring**, which together produce a single resolved palette used for gradient rendering.
+
+### Conference theme detection
+
+`_detect_conference_theme()` scores each theme's keyword list against the brief text and returns the best match.
+
+| Theme ID | Domain | Examples |
+|----------|--------|---------|
+| `tech_innovative` | Technology, AI, software | startup, cloud, blockchain, machine learning |
+| `finance_formal` | Finance, banking, compliance | equity, audit, treasury, regulatory |
+| `healthcare` | Medical, pharma, life science | clinical, biotech, genomics, patient |
+| `marketing_creative` | Brand, advertising, media | campaign, storytelling, content, agency |
+| `general` | Default fallback | — |
+
+### Tone detection — embedding axis projection
+
+`_detect_tone()` returns a continuous score **0.0 (very corporate) → 1.0 (very playful)** using semantic embedding projection:
+
+1. Two sets of short, extreme anchor phrases define the poles of the tone axis (seriousness and playfulness).
+2. The centroid of each set is computed once per process and cached.
+3. A unit vector is derived from `playfulness_centroid − seriousness_centroid` — this is the **tone axis**.
+4. The brief embedding is projected onto this axis.
+5. The projection is calibrated using the anchor centroids as reference points (0 = serious pole, 1 = playful pole).
+
+This is more discriminative than comparing independent cosine similarities because it measures movement along the specific tone dimension rather than overall proximity to either pole in the full high-dimensional space.
+
+**Inputs for tone detection:**
+
+| Source | Fields used | Why |
+|--------|-------------|-----|
+| Raw brief | `tone_of_voice`, `client_expectations`, `target_audience`, `campaign_goal` | Direct user declarations of character — highest signal quality; LLM enrichment tends to normalise these into neutral prose |
+| Document brief | `title`, `executive_summary`, `target_group`, `insight`, `creative_challenge`, `key_points` | Industry and context signals |
+
+**Keyword fallback:** when the embedding service is unavailable, a weighted keyword count over the same fields is used. Polish-language tone words are included explicitly (e.g. `elegancki/stonowany` → corporate; `zabawowy/energiczny/krzykliwy` → playful).
+
+**`tone_cap`:** some domains are structurally formal. Finance is hard-capped at 0.35 and healthcare at 0.70, regardless of the detected score.
+
+### Warm / cold colour axis
+
+The tone score drives a lerp between two palette variants per theme. The colour axis is:
+
+| Tone | Direction | Visual character |
+|------|-----------|-----------------|
+| 0.0 — corporate | **Cold** — near-black with steel/navy undertones | Single barely-visible blob, no streaks, static |
+| 1.0 — playful | **Warm** — oranges, ambers, hot pinks, reds | 5 large vivid blobs, high opacity, diagonal light streaks |
+
+| Theme | Corporate palette | Playful palette |
+|-------|-------------------|-----------------|
+| Tech | Near-black cold blue | Molten orange → hot pink |
+| Finance (cap 0.35) | Midnight near-black | Cold deep navy (stays cold; cap prevents warm) |
+| Healthcare (cap 0.70) | Clinical dark teal | Amber → coral |
+| Marketing | Dark aubergine | Fire orange → hot pink |
+| General | Near-black | Warm orange → rose |
+
+### Tone label in the UI
+
+The resolved tone score is shown in the badge workflow panel under each badge variant:
+
+```
+Typ uczestnika: Klient
+Przykładowe dane: Anna / Nowak / FinCorp / Director of Innovation
+Ton i charakter badga: Korporacyjny — stonowane, zimne odcienie (0.12)
+```
+
+| Score range | Label |
+|-------------|-------|
+| 0.00 – 0.15 | Bardzo korporacyjny — zimna, statyczna paleta |
+| 0.15 – 0.30 | Korporacyjny — stonowane, zimne odcienie |
+| 0.30 – 0.45 | Zrównoważony — umiarkowany charakter |
+| 0.45 – 0.60 | Dynamiczny — cieplejsze akcenty |
+| 0.60 – 0.78 | Swobodny — żywe, ciepłe barwy |
+| 0.78 – 1.00 | Bardzo swobodny — intensywne, gorące kolory |
+
+### AI visual keyword agent
+
+`_scan_brief_for_visual_keywords()` calls the LLM with a Polish instruction to extract 5–8 visual atmosphere descriptors from the brief (mood, energy level, metaphors). The descriptors are appended in English to the image-generation prompt so the AI-generated background texture reinforces the conference's character. Generic terms like "purple" or "gradient" are explicitly excluded.
+
+---
+
 ## Requirements compliance
 
 ### Functional requirements
@@ -258,6 +339,7 @@ The server merges only the returned fields back into the brief, re-runs `detect_
 | 3 | Multiple variants for different participant types | ✅ | 5 role variants: `guest`, `client`, `partner`, `organizer`, `speaker` — each with its own accent colour and visual cue |
 | 4 | Output as JPG or PNG | ✅ | PIL renders the final image; format is configurable (`png` default, `jpg` supported) |
 | 5 | Use image generation model | ✅ | `generate_image_bytes()` calls either FLUX via BFL API or Azure OpenAI Images to generate a branded background per badge |
+| 6 | Conference-aware visual theming | ✅ | `badge_generator.py` detects domain (tech / finance / healthcare / marketing) and scores tone via embedding axis projection; gradient palette lerps between cold-corporate and warm-playful poles |
 
 ### Non-functional requirements
 
