@@ -96,7 +96,6 @@ def _load_json_form_field(field_name, *, default=None):
     except json.JSONDecodeError:
         return None, _json_error(f"Field '{field_name}' must contain valid JSON")
 
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET"])

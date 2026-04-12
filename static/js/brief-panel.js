@@ -129,7 +129,6 @@ function renderBadgeGenerationMarkup(badgeGeneration, artifactDownloadUrl) {
         <div class="badge-plan-name">${escapeHtml(badge.name || 'Badge')}</div>
         <span class="badge-status-pill ${String(badge.status || '').includes('fail') ? 'failed' : 'started'}">${escapeHtml(badge.status || 'started')}</span>
       </div>
-      <div class="badge-plan-goal">${escapeHtml(badge.visual_cue || '')}</div>
       <div class="badge-plan-copy"><strong>Typ uczestnika:</strong> ${escapeHtml(badge.participant_type || '—')}</div>
       <div class="badge-plan-copy"><strong>Przykładowe dane:</strong> ${escapeHtml([
         badge.sample_participant?.first_name,

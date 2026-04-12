@@ -1,5 +1,6 @@
 import os
 import uuid
+from functools import lru_cache
 from typing import Any, Dict, List
 
 from docx import Document
@@ -10,6 +11,8 @@ from reportlab.lib.colors import HexColor
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 
 def _safe_text(value: Any) -> str:
@@ -23,6 +26,27 @@ def _safe_list(value: Any) -> List[str]:
     if isinstance(value, list):
         return [str(v).strip() for v in value if str(v).strip()]
     return []
+
+
+@lru_cache(maxsize=1)
+def _get_pdf_font_names() -> tuple[str, str]:
+    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
+    regular_path = os.path.join(fonts_dir, "Graphik-Regular.ttf")
+    bold_path = os.path.join(fonts_dir, "Graphik-Bold.ttf")
+
+    if not (os.path.exists(regular_path) and os.path.exists(bold_path)):
+        return "Helvetica", "Helvetica-Bold"
+
+    regular_name = "Graphik-Regular-Embedded"
+    bold_name = "Graphik-Bold-Embedded"
+
+    registered_fonts = set(pdfmetrics.getRegisteredFontNames())
+    if regular_name not in registered_fonts:
+        pdfmetrics.registerFont(TTFont(regular_name, regular_path))
+    if bold_name not in registered_fonts:
+        pdfmetrics.registerFont(TTFont(bold_name, bold_path))
+
+    return regular_name, bold_name
 
 
 def generate_document_brief_docx(document_brief: Dict[str, Any], output_dir: str = "generated") -> str:
@@ -94,6 +118,7 @@ def generate_document_brief_docx(document_brief: Dict[str, Any], output_dir: str
 def generate_document_brief_pdf(document_brief: Dict[str, Any], output_dir: str = "generated") -> str:
     os.makedirs(output_dir, exist_ok=True)
     path = os.path.join(output_dir, f"brief_{uuid.uuid4().hex}.pdf")
+    regular_font, bold_font = _get_pdf_font_names()
 
     doc = SimpleDocTemplate(path, pagesize=A4, leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
     styles = getSampleStyleSheet()
@@ -101,7 +126,7 @@ def generate_document_brief_pdf(document_brief: Dict[str, Any], output_dir: str 
     title_style = ParagraphStyle(
         "TitleCustom",
         parent=styles["Title"],
-        fontName="Helvetica-Bold",
+        fontName=bold_font,
         fontSize=20,
         leading=24,
         textColor=HexColor("#4A4AFF"),
@@ -112,7 +137,7 @@ def generate_document_brief_pdf(document_brief: Dict[str, Any], output_dir: str 
     heading_style = ParagraphStyle(
         "HeadingCustom",
         parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
+        fontName=bold_font,
         fontSize=12,
         leading=15,
         textColor=HexColor("#111111"),
@@ -123,7 +148,7 @@ def generate_document_brief_pdf(document_brief: Dict[str, Any], output_dir: str 
     body_style = ParagraphStyle(
         "BodyCustom",
         parent=styles["BodyText"],
-        fontName="Helvetica",
+        fontName=regular_font,
         fontSize=10.5,
         leading=15,
         textColor=HexColor("#222222"),

@@ -15,7 +15,7 @@ from services.ai_service import generate_image_bytes
 
 BRAND_GUIDELINES = {
     "primary_color": "#4A4AFF",
-    "base_colors": ["#000000", "#FFFFFF"],
+    "base_colors": ["#1B1B1B", "#FFFFFF"],
     "supporting_colors": ["#707070", "#F2F2F2"],
     "typography": "Graphik-like clean sans-serif",
     "geometry": "sharp corners, 0px radius",
@@ -41,14 +41,14 @@ ROLE_VARIANTS = [
         "label": "Gość",
         "keywords": ["gość", "gosc", "goście", "goscie", "guest", "guests", "attendee"],
         "visual_cue": "subtelny jasnoszary pasek z cienkim fioletowym akcentem",
-        "accent_color": "#D9D9D9",
+        "accent_color": "#224BFF",
     },
     {
         "id": "client",
         "label": "Klient",
         "keywords": ["klient", "klienci", "client", "clients"],
         "visual_cue": "szeroki czarny pasek roli i czarny pionowy akcent",
-        "accent_color": "#000000",
+        "accent_color": "#1B1B1B",
     },
     {
         "id": "partner",
@@ -66,7 +66,7 @@ ROLE_VARIANTS = [
     },
     {
         "id": "speaker",
-        "label": "Prelegent",
+        "label": "Speaker",
         "keywords": ["prelegent", "speaker", "speakerzy", "panelista"],
         "visual_cue": "biały pasek z fioletowym akcentem i cienką ramką",
         "accent_color": "#FFFFFF",
@@ -285,32 +285,32 @@ def _role_bar_style(role_id: str) -> Dict[str, str]:
             "edge": "#4A4AFF",
         },
         "client": {
-            "bar_fill": "#000000",
+            "bar_fill": "#1B1B1B",
             "bar_text": "#FFFFFF",
-            "bar_border": "#000000",
-            "bar_accent": "#000000",
-            "edge": "#000000",
+            "bar_border": "#1B1B1B",
+            "bar_accent": "#1B1B1B",
+            "edge": "#1B1B1B",
         },
         "partner": {
-            "bar_fill": "#BAB8B8",
-            "bar_text": "#111111",
-            "bar_border": "#BAB8B8",
-            "bar_accent": "#BAB8B8",
-            "edge": "#BAB8B8",
+            "bar_fill": "#C0BCBC",
+            "bar_text": "#1B1B1B",
+            "bar_border": "#C0BCBC",
+            "bar_accent": "#C0BCBC",
+            "edge": "#C0BCBC",
         },
         "speaker": {
             "bar_fill": "#FFFFFF",
-            "bar_text": "#111111",
+            "bar_text": "#1B1B1B",
             "bar_border": "#D9D9D9",
             "bar_accent": "#4A4AFF",
             "edge": "#4A4AFF",
         },
         "guest": {
-            "bar_fill": "#EFEFEF",
-            "bar_text": "#111111",
-            "bar_border": "#E2E2E2",
-            "bar_accent": "#CFCFCF",
-            "edge": "#CFCFCF",
+            "bar_fill": "#224BFF",
+            "bar_text": "#FFFFFF",
+            "bar_border": "#224BFF",
+            "bar_accent": "#224BFF",
+            "edge": "#224BFF",
         },
     }
     return styles.get(role_id, styles["guest"])
@@ -326,7 +326,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     base = Image.blend(
         Image.new("RGB", BADGE_SIZE, _hex_to_rgb("#FCFCFA")),
         base,
-        0.3,
+        0.4,
     )
     base = ImageEnhance.Color(base).enhance(0.28)
     base = ImageEnhance.Contrast(base).enhance(0.90)
@@ -459,7 +459,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
             (center_x - (company_width // 2), info_y),
             company_text,
             font=company_font,
-            fill=_hex_to_rgb("#1D1D1B"),
+            fill=_hex_to_rgb("#1B1B1B"),
         )
         info_y += (company_bbox[3] - company_bbox[1]) + 10
 
@@ -492,7 +492,6 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     draw.rectangle(
         (role_bar_left, role_bar_top, role_bar_right, role_bar_bottom),
         fill=_hex_to_rgb(role_style["bar_fill"]),
-        outline=_hex_to_rgb(role_style["bar_border"]),
         width=2,
     )
     if role_id == "speaker":
