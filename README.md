@@ -20,6 +20,12 @@ AZURE_LLM_API_VERSION=<e.g. 2024-02-01>
 AZURE_LLM_DEPLOYMENT=<chat model deployment name>
 AZURE_IMAGE_DEPLOYMENT=<image model deployment name>
 
+# Optional — dedicated embedding deployment for badge tone detection
+# Falls back to AZURE_LLM_ENDPOINT / AZURE_LLM_API_KEY if not set
+AZURE_EMBEDDING_ENDPOINT=<Azure OpenAI endpoint for embeddings>
+AZURE_EMBEDDING_API_KEY=<Azure OpenAI API key for embeddings>
+AZURE_EMBEDDING_DEPLOYMENT=<embedding model name, e.g. text-embedding-3-large>
+
 # Optional — enables FLUX image generation instead of Azure OpenAI Images
 FLUX_API_ENDPOINT=<BFL API endpoint>
 FLUX_API_KEY=<BFL API key>

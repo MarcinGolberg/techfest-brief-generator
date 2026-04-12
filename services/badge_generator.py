@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import os
 import re
 import unicodedata
@@ -11,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from PIL import Image, ImageColor, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 from openpyxl import load_workbook
 
-from services.ai_service import generate_image_bytes
+from services.ai_service import extract_structured_text, generate_image_bytes, get_embedding
 
 BRAND_GUIDELINES = {
     "primary_color": "#4A4AFF",
@@ -29,7 +30,7 @@ BRAND_GUIDELINES = {
     "source_document": "brand.example.json",
 }
 
-LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo.png")
+LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo-white.png")
 BADGE_SIZE = (900, 1200)
 SAFE_MARGIN = 56
 ROLE_STRIP_WIDTH = 42
@@ -107,6 +108,254 @@ SAMPLE_PARTICIPANTS = {
 }
 
 ROLE_VARIANT_BY_ID = {role["id"]: role for role in ROLE_VARIANTS}
+
+# ── Conference theme catalogue ─────────────────────────────────────────────────
+# Each theme carries a `corporate` (tone=0) and `playful` (tone=1) palette pair.
+# _apply_tone_to_theme() lerps between them based on the detected tone score.
+#
+# Visual design intent:
+#   CORPORATE → near-black / monochrome / completely static / 1 invisible blob
+#   PLAYFUL   → hyper-saturated multi-colour / 5 large blobs / diagonal streaks
+# The contrast must be immediately obvious to the eye.
+CONFERENCE_THEMES = {
+    "tech_innovative": {
+        "theme_id": "tech_innovative",
+        "tone_cap": 1.0,
+        "keywords": [
+            "tech", "technology", "ai", "artificial intelligence", "digital",
+            "innovation", "startup", "software", "cloud", "data", "platform",
+            "cyber", "blockchain", "machine learning", "robotics", "automation",
+            "saas", "api", "deep learning", "neural",
+        ],
+        # Near-black with a barely-visible cold-blue tint. Completely static.
+        "corporate": {
+            "style": "formal",
+            "dynamism": 0.05,
+            "gradient_stops": [
+                (0.0, ( 2,  2, 10)),
+                (0.5, ( 8,  5, 28)),
+                (1.0, ( 3,  2, 12)),
+            ],
+            "blob_colors": [(12, 8, 40)],
+            "blob_configs": [(0.50, 0.45, 0.40)],
+            "light_streak": False,
+            "text_accent": (100, 145, 210),
+            "separator_color": (70, 110, 170),
+            "prompt_hint": "cold precision, structured silence, digital architecture, monochrome depth",
+        },
+        # Molten orange erupts into hot pink — extreme heat, maximum dynamism.
+        "playful": {
+            "style": "innovative",
+            "dynamism": 1.00,
+            "gradient_stops": [
+                (0.0,  ( 12,  2,  2)),
+                (0.20, (200, 60,  5)),
+                (0.48, (255, 90, 25)),
+                (0.72, (235, 30, 85)),
+                (0.88, (160, 10, 50)),
+                (1.0,  ( 28,  2,  8)),
+            ],
+            "blob_colors": [(255, 140, 20), (255, 50, 80), (240, 100, 10), (220, 30, 100), (255, 180, 50)],
+            "blob_configs": [
+                (0.85, 0.08, 0.65),
+                (0.12, 0.55, 0.58),
+                (0.68, 0.85, 0.48),
+                (0.40, 0.22, 0.40),
+                (0.55, 0.60, 0.35),
+            ],
+            "light_streak": True,
+            "text_accent": (255, 225, 155),
+            "separator_color": (255, 190, 100),
+            "prompt_hint": "blazing tech fire, molten orange surge, hot pink explosion, electric heat, dynamic innovation",
+        },
+    },
+    "finance_formal": {
+        "theme_id": "finance_formal",
+        "tone_cap": 0.35,   # finance is structurally serious — hard ceiling on playfulness
+        "keywords": [
+            "finance", "financial", "banking", "investment", "capital", "trading",
+            "fund", "asset", "portfolio", "fintech", "insurance", "wealth",
+            "equity", "risk", "compliance", "regulatory", "audit", "accounting",
+            "treasury", "private equity", "hedge", "credit",
+        ],
+        # Pure midnight — almost indistinguishable from black. Single faint blob.
+        "corporate": {
+            "style": "formal",
+            "dynamism": 0.04,
+            "gradient_stops": [
+                (0.0, ( 2,  1,  8)),
+                (0.5, ( 9,  6, 22)),
+                (1.0, ( 4,  2, 10)),
+            ],
+            "blob_colors": [(14, 10, 32)],
+            "blob_configs": [(0.50, 0.45, 0.42)],
+            "light_streak": False,
+            "text_accent": (195, 172, 128),
+            "separator_color": (145, 125, 88),
+            "prompt_hint": "midnight austerity, absolute precision, monolithic authority, unwavering control",
+        },
+        # "Less formal" (cap 0.35) — cold deep navy-blue, slightly brighter. Still formal, still cold.
+        "playful": {
+            "style": "formal",
+            "dynamism": 0.28,
+            "gradient_stops": [
+                (0.0, ( 4,  8, 32)),
+                (0.4, (12, 28, 82)),
+                (0.7, (20, 50,128)),
+                (1.0, ( 6, 14, 48)),
+            ],
+            "blob_colors": [(18, 48, 130), (28, 65, 160)],
+            "blob_configs": [(0.65, 0.25, 0.44), (0.35, 0.70, 0.36)],
+            "light_streak": False,
+            "text_accent": (180, 205, 245),
+            "separator_color": (140, 168, 215),
+            "prompt_hint": "distinguished gravity, cold institutional confidence, steel authority, refined blue power",
+        },
+    },
+    "healthcare": {
+        "theme_id": "healthcare",
+        "tone_cap": 0.70,
+        "keywords": [
+            "health", "healthcare", "medical", "pharma", "pharmaceutical",
+            "clinical", "biotech", "wellness", "hospital", "medicine", "patient",
+            "therapy", "life science", "diagnostics", "genomics",
+        ],
+        # Almost-black with a faint teal undertone. Cold, clinical, still.
+        "corporate": {
+            "style": "formal",
+            "dynamism": 0.06,
+            "gradient_stops": [
+                (0.0, ( 2,  6, 12)),
+                (0.5, (10, 28, 40)),
+                (1.0, ( 4, 10, 20)),
+            ],
+            "blob_colors": [(8, 35, 52)],
+            "blob_configs": [(0.50, 0.45, 0.42)],
+            "light_streak": False,
+            "text_accent": (110, 210, 200),
+            "separator_color": (75, 175, 165),
+            "prompt_hint": "clinical stillness, sterile precision, deep teal silence, life-critical calm",
+        },
+        # Warm amber erupts into coral — healing warmth, vibrant but capped at 0.70.
+        "playful": {
+            "style": "innovative",
+            "dynamism": 0.78,
+            "gradient_stops": [
+                (0.0,  (  8,  4,  6)),
+                (0.28, (185, 75, 15)),
+                (0.55, (255,135, 45)),
+                (0.80, (230, 65,105)),
+                (1.0,  ( 18,  5, 12)),
+            ],
+            "blob_colors": [(255, 158, 48), (255, 90, 118), (240, 128, 28), (225, 72, 108)],
+            "blob_configs": [
+                (0.80, 0.12, 0.55),
+                (0.18, 0.58, 0.50),
+                (0.65, 0.82, 0.42),
+                (0.40, 0.35, 0.35),
+            ],
+            "light_streak": True,
+            "text_accent": (255, 222, 158),
+            "separator_color": (255, 185, 108),
+            "prompt_hint": "vibrant healing warmth, amber energy, coral vitality, warm wellness glow, bright life",
+        },
+    },
+    "marketing_creative": {
+        "theme_id": "marketing_creative",
+        "tone_cap": 1.0,
+        "keywords": [
+            "marketing", "brand", "creative", "design", "advertising", "media",
+            "campaign", "content", "social", "digital marketing", "agency",
+            "pr", "communication", "strategy", "storytelling",
+        ],
+        # Very dark aubergine. Restrained, controlled. No streak.
+        "corporate": {
+            "style": "formal",
+            "dynamism": 0.08,
+            "gradient_stops": [
+                (0.0, (10,  0, 22)),
+                (0.5, (38,  0, 82)),
+                (1.0, (16,  0, 38)),
+            ],
+            "blob_colors": [(50, 0, 110)],
+            "blob_configs": [(0.50, 0.42, 0.44)],
+            "light_streak": False,
+            "text_accent": (220, 180, 245),
+            "separator_color": (180, 140, 210),
+            "prompt_hint": "commanding brand silence, dark authority, strategic restraint, pure creative control",
+        },
+        # Fire orange explodes into hot pink — maximum creative heat, chaotic and loud.
+        "playful": {
+            "style": "innovative",
+            "dynamism": 1.00,
+            "gradient_stops": [
+                (0.0,  ( 18,  2,  0)),
+                (0.22, (220, 62,  0)),
+                (0.50, (255,102, 20)),
+                (0.75, (255, 32, 82)),
+                (0.90, (185, 18, 52)),
+                (1.0,  ( 42,  4,  8)),
+            ],
+            "blob_colors": [(255, 120, 22), (255, 42, 82), (245, 82, 12), (255, 62, 122), (225, 102, 28)],
+            "blob_configs": [
+                (0.82, 0.08, 0.68),
+                (0.15, 0.55, 0.60),
+                (0.65, 0.85, 0.45),
+                (0.42, 0.26, 0.38),
+                (0.58, 0.55, 0.30),
+            ],
+            "light_streak": True,
+            "text_accent": (255, 225, 162),
+            "separator_color": (255, 190, 112),
+            "prompt_hint": "explosive fire campaign, blazing orange energy, hot pink impact, molten creativity, maximum heat",
+        },
+    },
+    "general": {
+        "theme_id": "general",
+        "tone_cap": 1.0,
+        "keywords": [],
+        # Near-black with a hint of Accenture purple. Completely monochrome.
+        "corporate": {
+            "style": "formal",
+            "dynamism": 0.06,
+            "gradient_stops": [
+                (0.0, ( 5,  0, 15)),
+                (0.5, (20,  0, 52)),
+                (1.0, ( 8,  0, 22)),
+            ],
+            "blob_colors": [(15, 0, 42)],
+            "blob_configs": [(0.50, 0.45, 0.42)],
+            "light_streak": False,
+            "text_accent": (185, 155, 230),
+            "separator_color": (145, 115, 195),
+            "prompt_hint": "refined stillness, elegant restraint, premium monochrome depth, authoritative calm",
+        },
+        # Warm orange bursts into rose — general warmth, vibrant and joyful.
+        "playful": {
+            "style": "innovative",
+            "dynamism": 1.00,
+            "gradient_stops": [
+                (0.0,  ( 14,  2,  2)),
+                (0.25, (205, 72, 18)),
+                (0.55, (255,115, 32)),
+                (0.80, (238, 52,105)),
+                (1.0,  ( 48,  5, 15)),
+            ],
+            "blob_colors": [(255, 132, 28), (255, 62, 112), (242, 102, 18), (255, 82, 142), (222, 112, 38)],
+            "blob_configs": [
+                (0.82, 0.10, 0.65),
+                (0.15, 0.60, 0.58),
+                (0.68, 0.85, 0.42),
+                (0.38, 0.26, 0.38),
+                (0.55, 0.52, 0.30),
+            ],
+            "light_streak": True,
+            "text_accent": (255, 222, 162),
+            "separator_color": (255, 188, 112),
+            "prompt_hint": "vibrant warm explosion, orange burst, rose energy, dynamic heat, joyful vibrant impact",
+        },
+    },
+}
 
 PARTICIPANT_COLUMN_ALIASES = {
     "full_name": {"full name", "full_name", "imie i nazwisko", "imię i nazwisko", "uczestnik", "participant"},
@@ -189,7 +438,7 @@ def _fit_logo(max_width: int, max_height: int) -> Image.Image:
     if not os.path.exists(LOGO_PATH):
         raise ValueError(
             f"Nie znaleziono pliku logo Accenture pod ścieżką {LOGO_PATH}. "
-            "Przywróć plik Accenture-logo.png do katalogu team4/images."
+            "Przywróć plik Accenture-logo-white.png do katalogu team4/images."
         )
     logo = Image.open(LOGO_PATH).convert("RGBA")
     return ImageOps.contain(logo, (max_width, max_height))
@@ -316,58 +565,428 @@ def _role_bar_style(role_id: str) -> Dict[str, str]:
     return styles.get(role_id, styles["guest"])
 
 
+# ── Gradient background helpers ───────────────────────────────────────────────
+
+def _lerp_color(c1: tuple, c2: tuple, t: float) -> tuple:
+    t = max(0.0, min(1.0, t))
+    return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+
+
+def _interpolate_gradient_stops(stops: List[tuple], t: float) -> tuple:
+    t = max(0.0, min(1.0, t))
+    if t <= stops[0][0]:
+        return stops[0][1]
+    if t >= stops[-1][0]:
+        return stops[-1][1]
+    for i in range(len(stops) - 1):
+        p0, c0 = stops[i]
+        p1, c1 = stops[i + 1]
+        if p0 <= t <= p1:
+            local_t = (t - p0) / (p1 - p0) if p1 > p0 else 0.0
+            return _lerp_color(c0, c1, local_t)
+    return stops[-1][1]
+
+
+def _build_gradient_background(size: tuple, theme_info: Dict[str, Any]) -> Image.Image:
+    """Build a theme- and tone-driven background.
+
+    The visual language is deliberately extreme to make the corporate ↔ playful
+    axis immediately obvious:
+
+    CORPORATE (dynamism ≈ 0):
+        Near-black base, single near-invisible blob, no streak.
+
+    PLAYFUL (dynamism ≈ 1):
+        Multi-stop saturated gradient, 5 large vivid blobs at high opacity,
+        two crossing diagonal streaks.
+    """
+    width, height = size
+    style = theme_info.get("style", "innovative")
+    gradient_stops = theme_info.get("gradient_stops", [(0.0, (5, 0, 15)), (1.0, (80, 0, 190))])
+    blob_colors = theme_info.get("blob_colors", [(161, 0, 255)])
+    blob_configs = theme_info.get("blob_configs", [(0.75, 0.2, 0.5)])
+    light_streak = theme_info.get("light_streak", False)
+    dynamism = max(0.0, min(1.0, theme_info.get("dynamism", 0.5)))
+
+    # ── Base vertical gradient ────────────────────────────────────────────────
+    base = Image.new("RGB", size)
+    draw = ImageDraw.Draw(base)
+    for y in range(height):
+        t = y / max(height - 1, 1)
+        color = _interpolate_gradient_stops(gradient_stops, t)
+        draw.line([(0, y), (width - 1, y)], fill=color)
+
+    # ── Radial blobs ──────────────────────────────────────────────────────────
+    # Alpha: 20 (near-invisible for corporate) → 230 (very vivid for playful).
+    # Radius: scaled up by up to ×1.45 at high dynamism for bigger presence.
+    blob_alpha = int(20 + dynamism * 210)
+    radius_scale = 0.75 + dynamism * 0.70   # 0.75× corporate → 1.45× playful
+    overlay = base.convert("RGBA")
+    for i, (cx_frac, cy_frac, r_frac) in enumerate(blob_configs):
+        cx = int(width * cx_frac)
+        cy = int(height * cy_frac)
+        radius = int(width * r_frac * radius_scale)
+        color = blob_colors[i % len(blob_colors)]
+
+        blob_layer = Image.new("RGBA", size, (0, 0, 0, 0))
+        blob_draw = ImageDraw.Draw(blob_layer)
+        blob_draw.ellipse(
+            [cx - radius, cy - radius, cx + radius, cy + radius],
+            fill=(*color, blob_alpha),
+        )
+        # Tighter blur for corporate (sharper, barely visible), softer for playful.
+        blur_sigma = min(95, max(12, int(radius * (0.30 + dynamism * 0.25))))
+        blob_layer = blob_layer.filter(ImageFilter.GaussianBlur(radius=blur_sigma))
+        overlay = Image.alpha_composite(overlay, blob_layer)
+
+    base = overlay.convert("RGB")
+
+    # ── Diagonal light streaks ────────────────────────────────────────────────
+    # For playful themes: two crossing bright streaks create a sense of motion.
+    # Alpha rises steeply with dynamism so the streaks are invisible at tone≈0.
+    if light_streak and style == "innovative":
+        streak_alpha = int(dynamism * 32)   # 0 at corporate → 32 at max playful
+        if streak_alpha > 0:
+            streak = Image.new("RGBA", size, (0, 0, 0, 0))
+            sd = ImageDraw.Draw(streak)
+            # Primary diagonal slash (top-left → bottom-right direction)
+            sd.polygon(
+                [
+                    (int(width * 0.24), 0),
+                    (int(width * 0.56), 0),
+                    (int(width * 0.36), height),
+                    (int(width * 0.04), height),
+                ],
+                fill=(255, 255, 255, streak_alpha),
+            )
+            # Counter-diagonal slash (top-right → bottom-left) — adds chaos
+            if dynamism > 0.65:
+                sd.polygon(
+                    [
+                        (int(width * 0.55), 0),
+                        (int(width * 0.80), 0),
+                        (int(width * 0.62), height),
+                        (int(width * 0.38), height),
+                    ],
+                    fill=(255, 255, 255, streak_alpha // 2),
+                )
+            base = Image.alpha_composite(base.convert("RGBA"), streak).convert("RGB")
+
+    return base
+
+
+def _detect_conference_theme(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the best-matching CONFERENCE_THEMES entry via keyword scoring."""
+    combined = " ".join([
+        _safe_text(brief.get("product_or_service")),
+        _safe_text(brief.get("scope_of_work")),
+        _safe_text(brief.get("target_audience")),
+        _safe_text(brief.get("client_expectations")),
+        _safe_text(brief.get("key_messages")),
+        _safe_text(document_brief.get("title")),
+        _safe_text(document_brief.get("description")),
+        _safe_text(document_brief.get("target_group")),
+    ]).lower()
+
+    best_id = "general"
+    best_score = 0
+    for theme_id, theme in CONFERENCE_THEMES.items():
+        if theme_id == "general":
+            continue
+        score = sum(1 for kw in theme["keywords"] if kw in combined)
+        if score > best_score:
+            best_score = score
+            best_id = theme_id
+
+    return CONFERENCE_THEMES[best_id]
+
+
+# ── Semantic tone detection ────────────────────────────────────────────────────
+#
+# Tone detection uses axis-projection onto the single semantic axis defined by
+# the direction from the seriousness centroid to the playfulness centroid:
+#
+#   axis = normalize(playful_centroid - serious_centroid)
+#   proj = dot(brief_vec, axis)
+#   tone = (proj - proj_serious) / (proj_playful - proj_serious)   → [0, 1]
+#
+# This is more discriminative than comparing independent cosine similarities
+# because it measures position along the specific serious↔playful axis rather
+# than overall proximity to either pole in the full embedding space.
+#
+# Anchors: short, extreme, maximally-separated keyword phrases.  Verbose
+# sentences pull the centroid toward the generic "conference/professional"
+# semantic region where both poles overlap.  Tight keyword phrases stay in their
+# respective extreme corners of the space.
+#
+# Falls back to lightweight keyword scoring if the embedding call fails.
+
+_SERIOUSNESS_ANCHORS = [
+    "audyt, compliance, regulacje, nadzor korporacyjny, zarzad, dyrektywy prawne",
+    "wyniki finansowe, sprawozdawczosc, risk management, due diligence, inwestorzy",
+    "instytucja finansowa, bank centralny, fundusz, nadzor regulacyjny, prawo gospodarcze",
+    "formalna konferencja korporacyjna, dyrektorzy zarzadzajacy, decyzje strategiczne, rada nadzorcza",
+    "procedury wewnetrzne, polityka korporacyjna, lad organizacyjny, rygorystyczne wymogi, zgodnosc",
+]
+
+_PLAYFULNESS_ANCHORS = [
+    "zabawa, gry, impreza, muzyka, taniec, swietowanie, relaks, luzona atmosfera",
+    "hackathon, startup, prototyp, eksperyment, kreatywnosc, spontanicznosc, energia, przygoda",
+    "festiwal, spolecznosc, nieformalne spotkanie, pozytywna atmosfera, radosc, entuzjazm",
+    "warsztaty tworcze, gry zespolowe, animacje, aktywnosci, interakcja, wspolna zabawa",
+    "meetup, casual networking, otwarta kultura, swoboda, mloda energia, dynamizm, luz",
+]
+
+# Cached centroids and the pre-computed normalised axis vector.
+# All three are computed once per process and reused across requests.
+_anchor_centroids: Dict[str, Optional[List[float]]] = {
+    "seriousness": None,
+    "playfulness": None,
+    "axis_norm": None,   # unit vector from serious → playful centroid
+    "proj_serious": None,  # projection of serious centroid onto axis (calibration low bound)
+    "proj_playful": None,  # projection of playful centroid onto axis (calibration high bound)
+}
+
+
+
+def _compute_centroid(phrases: List[str]) -> List[float]:
+    embeddings = [get_embedding(p) for p in phrases]
+    dim = len(embeddings[0])
+    return [sum(emb[i] for emb in embeddings) / len(embeddings) for i in range(dim)]
+
+
+def _build_tone_description(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> str:
+    """Build the text used for tone/sentiment detection.
+
+    The explicit tone fields from the raw brief (tone_of_voice, client_expectations,
+    target_audience) are the strongest signals and are placed first.  The LLM-enriched
+    document brief fields follow for additional context.  Using the raw brief's tone
+    fields is intentional here — they are direct user declarations of desired character
+    (e.g. "swobodny, energiczny" vs "premium, stonowany") that the LLM enrichment step
+    tends to neutralise into formal prose.
+    """
+    key_points_text = " ".join(_safe_list(document_brief.get("key_points")))
+    return " ".join(filter(None, [
+        # Explicit tone declarations from raw brief — highest signal quality
+        _safe_text(brief.get("tone_of_voice")),
+        _safe_text(brief.get("client_expectations")),
+        _safe_text(brief.get("target_audience")),
+        _safe_text(brief.get("campaign_goal")),
+        # Document brief — context and industry
+        _safe_text(document_brief.get("title")),
+        _safe_text(document_brief.get("executive_summary")),
+        _safe_text(document_brief.get("target_group")),
+        _safe_text(document_brief.get("insight")),
+        _safe_text(document_brief.get("creative_challenge")),
+        key_points_text,
+    ]))
+
+
+def _detect_tone_keyword_fallback(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> float:
+    """Lightweight keyword-based fallback when embeddings are unavailable."""
+    corporate_kw = {
+        # English
+        "enterprise", "executive", "board", "boardroom", "governance", "compliance",
+        "regulatory", "stakeholder", "shareholder", "strategic", "formal",
+        "professional", "corporate", "due diligence", "fiduciary",
+        # Polish — explicit tone words from briefs
+        "elegancki", "eleganckie", "stonowany", "stonowane", "premium",
+        "powściągliwy", "powściągliwe", "prestiżowy", "prestiżowe",
+        "ekskluzywny", "ekskluzywne", "reprezentacyjny", "bez krzykliwości",
+        "wyrafinowany", "wyrafinowane", "profesjonalny", "profesjonalne",
+        # Polish — corporate context
+        "zarząd", "regulacje", "instytucjonalne", "korporacyjne", "finansowy",
+        "inwestorzy", "compliance", "audyt",
+    }
+    playful_kw = {
+        # English
+        "startup", "hackathon", "festival", "fun", "creative", "casual",
+        "workshop", "bootcamp", "celebrate", "maker", "meetup",
+        # Polish — explicit tone words from briefs
+        "zabawowy", "zabawowe", "energiczny", "energiczne", "progresywny",
+        "progresywne", "swobodny", "swobodne", "kreatywny", "kreatywne",
+        "krzykliwy", "krzykliwe", "dynamiczny", "dynamiczne", "luźny", "luźne",
+        "radosny", "radosne", "festiwalowy", "festiwalowe", "nieformalne",
+        # Polish — playful context
+        "zabawa", "festiwal", "swietowanie", "społeczność", "warsztaty",
+        "hackathon", "networking", "młodzi",
+    }
+    combined = _build_tone_description(brief, document_brief).lower()
+    corp = sum(1 for kw in corporate_kw if kw in combined)
+    play = sum(1 for kw in playful_kw if kw in combined)
+    total = corp + play
+    if total == 0:
+        return 0.20
+    return max(0.0, min(1.0, play / total))
+
+
+def _detect_tone(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> float:
+    """Return a tone score 0.0 (very corporate/serious) -> 1.0 (very playful/free).
+
+    Uses axis-projection onto the semantic axis from seriousness to playfulness:
+      1. Compute unit vector from serious centroid to playful centroid.
+      2. Project the brief embedding onto that axis.
+      3. Calibrate with anchor projections; normalise to [0, 1].
+
+    The description is built from both the raw brief's explicit tone fields
+    (tone_of_voice, client_expectations) and the enriched document brief.
+
+    Falls back to keyword scoring when the embedding service is unavailable.
+    """
+    description = _build_tone_description(brief, document_brief)
+    if not description.strip():
+        return 0.20
+
+    try:
+        global _anchor_centroids
+        # Build and cache centroids + axis on first call
+        if _anchor_centroids["seriousness"] is None:
+            _anchor_centroids["seriousness"] = _compute_centroid(_SERIOUSNESS_ANCHORS)
+        if _anchor_centroids["playfulness"] is None:
+            _anchor_centroids["playfulness"] = _compute_centroid(_PLAYFULNESS_ANCHORS)
+
+        if _anchor_centroids["axis_norm"] is None:
+            serious_c = _anchor_centroids["seriousness"]
+            playful_c = _anchor_centroids["playfulness"]
+            # Raw axis: direction from serious pole to playful pole
+            raw_axis = [p - s for p, s in zip(playful_c, serious_c)]
+            mag = math.sqrt(sum(x * x for x in raw_axis))
+            if mag == 0.0:
+                return _detect_tone_keyword_fallback(brief, document_brief)
+            axis_norm = [x / mag for x in raw_axis]
+            _anchor_centroids["axis_norm"] = axis_norm
+            # Calibration: where do the anchor centroids themselves land on this axis?
+            _anchor_centroids["proj_serious"] = sum(s * a for s, a in zip(serious_c, axis_norm))
+            _anchor_centroids["proj_playful"] = sum(p * a for p, a in zip(playful_c, axis_norm))
+
+        axis_norm = _anchor_centroids["axis_norm"]
+        proj_serious = _anchor_centroids["proj_serious"]
+        proj_playful = _anchor_centroids["proj_playful"]
+        span = proj_playful - proj_serious  # always > 0 by construction
+
+        brief_vec = get_embedding(description[:3000])
+        proj_brief = sum(b * a for b, a in zip(brief_vec, axis_norm))
+
+        # Normalise: 0.0 = at the serious anchor centroid, 1.0 = at the playful centroid.
+        # Apply a soft ceiling (0.9) — real briefs rarely reach pure-festival extremity.
+        raw = (proj_brief - proj_serious) / span
+        tone = max(0.0, min(1.0, raw * 0.9))
+        return tone
+
+    except Exception:
+        return _detect_tone_keyword_fallback(brief, document_brief)
+
+
+def _lerp_gradient_stops(
+    stops_a: List[tuple], stops_b: List[tuple], t: float
+) -> List[tuple]:
+    """Lerp between two gradient stop lists at the union of their positions."""
+    positions = sorted({p for p, _ in stops_a} | {p for p, _ in stops_b})
+    result = []
+    for pos in positions:
+        color_a = _interpolate_gradient_stops(stops_a, pos)
+        color_b = _interpolate_gradient_stops(stops_b, pos)
+        result.append((pos, _lerp_color(color_a, color_b, t)))
+    return result
+
+
+def _apply_tone_to_theme(theme_info: Dict[str, Any], tone: float) -> Dict[str, Any]:
+    """Blend the corporate and playful palette variants based on tone [0, 1].
+
+    Returns a flat dict with resolved values ready for gradient building and
+    badge composition.  tone_cap clips the maximum allowed playfulness for
+    inherently formal domains.
+    """
+    tone = max(0.0, min(1.0, tone))
+    tone = min(tone, theme_info.get("tone_cap", 1.0))
+
+    corp = theme_info["corporate"]
+    play = theme_info["playful"]
+
+    # Gradient stops — lerp across the union of stop positions
+    gradient_stops = _lerp_gradient_stops(corp["gradient_stops"], play["gradient_stops"], tone)
+
+    # Blobs — switch at the midpoint (blending blob positions makes no sense visually)
+    if tone <= 0.50:
+        blob_colors = corp["blob_colors"]
+        blob_configs = corp["blob_configs"]
+    else:
+        blob_colors = play["blob_colors"]
+        blob_configs = play["blob_configs"]
+
+    dynamism = corp["dynamism"] + (play["dynamism"] - corp["dynamism"]) * tone
+    style = play["style"] if tone > 0.50 else corp["style"]
+    light_streak = play["light_streak"] if tone > 0.60 else corp["light_streak"]
+    text_accent = _lerp_color(corp["text_accent"], play["text_accent"], tone)
+    separator_color = _lerp_color(corp["separator_color"], play["separator_color"], tone)
+    prompt_hint = play["prompt_hint"] if tone > 0.50 else corp["prompt_hint"]
+
+    return {
+        "theme_id": theme_info["theme_id"],
+        "style": style,
+        "dynamism": dynamism,
+        "gradient_stops": gradient_stops,
+        "blob_colors": blob_colors,
+        "blob_configs": blob_configs,
+        "light_streak": light_streak,
+        "text_accent": text_accent,
+        "separator_color": separator_color,
+        "prompt_hint": prompt_hint,
+        "tone": tone,
+    }
+
+
 def _open_generated_background(image_bytes: bytes) -> Image.Image:
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     return ImageOps.fit(image, BADGE_SIZE, method=Image.Resampling.LANCZOS)
 
 
 def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
-    base = _open_generated_background(image_bytes).filter(ImageFilter.GaussianBlur(radius=8))
-    base = Image.blend(
-        Image.new("RGB", BADGE_SIZE, _hex_to_rgb("#FCFCFA")),
-        base,
-        0.4,
-    )
-    base = ImageEnhance.Color(base).enhance(0.28)
-    base = ImageEnhance.Contrast(base).enhance(0.90)
-    base = ImageEnhance.Brightness(base).enhance(1.06)
-    base = Image.blend(base, Image.new("RGB", BADGE_SIZE, _hex_to_rgb("#FBFBF9")), 0.76)
+    """Compose the final badge image.
 
-    canvas = Image.new("RGB", BADGE_SIZE, _hex_to_rgb("#FCFCFA"))
-    canvas.paste(base, (0, 0))
-    width, height = canvas.size
-    overlay = Image.new("RGBA", BADGE_SIZE, (255, 255, 255, 0))
+    Background: a theme-driven purple gradient (dynamic blobs for innovative
+    themes, clean linear for formal themes). The AI-generated image is blended
+    in at very low opacity as an organic texture layer so the keyword-enriched
+    prompt still influences the final look without overwhelming the gradient.
+    All foreground text is rendered in white/light-lavender tones for contrast.
+    The Accenture logo sits on a white panel at the bottom (brand-compliance
+    rule: full-colour logo must appear on white).
+    """
+    theme_info = badge.get("themeInfo") or CONFERENCE_THEMES["general"]
+    style = theme_info.get("style", "innovative")
+
+    # ── Background: gradient + subtle AI texture ──────────────────────────────
+    gradient = _build_gradient_background(BADGE_SIZE, theme_info)
+    ai_texture = _open_generated_background(image_bytes)
+    ai_texture = ImageEnhance.Color(ai_texture).enhance(0.35)
+    ai_texture = ImageEnhance.Brightness(ai_texture).enhance(0.30)
+    ai_opacity = 0.12 if style == "innovative" else 0.06
+    canvas_rgb = Image.blend(gradient, ai_texture, ai_opacity)
+
+    width, height = canvas_rgb.size
+
+    # ── Subtle polygon overlays for visual depth ──────────────────────────────
+    overlay = Image.new("RGBA", BADGE_SIZE, (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
     overlay_draw.polygon(
-        [
-            (0, 0),
-            (width * 0.48, 0),
-            (width * 0.26, height),
-            (0, height),
-        ],
-        fill=(255, 255, 255, 82),
+        [(0, 0), (int(width * 0.42), 0), (int(width * 0.22), height), (0, height)],
+        fill=(255, 255, 255, 10),
     )
-    overlay_draw.polygon(
-        [
-            (width * 0.60, 0),
-            (width, 0),
-            (width, height * 0.58),
-            (width * 0.78, height),
-            (width * 0.52, height),
-        ],
-        fill=(161, 0, 255, 18),
-    )
-    overlay_draw.rectangle((0, 0, width, height), outline=(230, 230, 227, 90), width=2)
-    canvas = Image.alpha_composite(canvas.convert("RGBA"), overlay).convert("RGB")
+    canvas = Image.alpha_composite(canvas_rgb.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
+    # ── Extract badge data ────────────────────────────────────────────────────
     layout_data = badge.get("badgeLayoutData") or {}
     participant = layout_data.get("participant") or {}
     layout = layout_data.get("layout") or {}
     attendee_name = _safe_text(participant.get("fullName")) or " ".join(
         part for part in [participant.get("firstName"), participant.get("lastName")] if _safe_text(part)
     ).strip() or "Jan Kowalski"
-    conference_name = _safe_text(layout_data.get("conferenceName")) or _safe_text(badge.get("conference_name")) or _safe_text(badge.get("headline"))
+    conference_name = (
+        _safe_text(layout_data.get("conferenceName"))
+        or _safe_text(badge.get("conference_name"))
+        or _safe_text(badge.get("headline"))
+    )
     role_id = _safe_text(participant.get("participantTypeId") or badge.get("role_id") or "guest")
     role_text = _safe_text(participant.get("participantType") or badge.get("participant_type")).upper()
     secondary_text = _safe_text(layout.get("secondaryText"))
@@ -380,22 +999,16 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     card_top = 0
     card_right = width
     card_bottom = height
-    card_radius = 0
     edge_width = 28
-    # draw.rounded_rectangle(
-    #     (card_left, card_top, card_right, card_bottom),
-    #     radius=card_radius,
-    #     fill=_hex_to_rgb("#FEFEFD"),
-    #     outline=_hex_to_rgb("#ECECE8"),
-    #     width=1,
-    # )
 
+    # ── Right-edge role colour strip ──────────────────────────────────────────
     edge_color = _hex_to_rgb(role_style["edge"])
     draw.rectangle(
         (card_right - edge_width, card_top, card_right, card_bottom),
         fill=edge_color,
     )
 
+    # ── Fonts ─────────────────────────────────────────────────────────────────
     title_font = _load_font(42, bold=False)
     role_font = _load_font(48, bold=True)
     company_font = _load_font(48, bold=True)
@@ -408,7 +1021,8 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     content_width = content_right - content_left
     center_x = (content_left + content_right) // 2
 
-    conference_fill = _hex_to_rgb("#5D347B")
+    # ── Conference name (field-accent colour on dark background) ─────────────
+    conference_fill = theme_info.get("text_accent", (210, 185, 255))
     title_lines = _wrap_text(_truncate(conference_name, 80), draw, title_font, content_width)
     current_y = card_top + 86
     for line in title_lines[:2]:
@@ -423,6 +1037,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         )
         current_y += line_height + 4
 
+    # ── Attendee name (white) ─────────────────────────────────────────────────
     name_top = card_top + 270
     name_font, name_lines, _ = _fit_multiline_text(
         draw,
@@ -439,18 +1054,20 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         center_x=center_x,
         top_y=name_top,
         font=name_font,
-        fill=_hex_to_rgb("#0B0B0B"),
+        fill=(255, 255, 255),
         line_spacing=10,
     )
 
+    # ── Separator line ────────────────────────────────────────────────────────
     separator_y = name_bottom + 42
     separator_half_width = min(220, content_width // 2 - 20)
     draw.line(
         (center_x - separator_half_width, separator_y, center_x + separator_half_width, separator_y),
-        fill=_hex_to_rgb("#AFAFAC"),
+        fill=theme_info.get("separator_color", (175, 150, 215)),
         width=2,
     )
 
+    # ── Company / position / secondary text (light on dark) ──────────────────
     info_y = separator_y + 30
     if company_text:
         company_bbox = draw.textbbox((0, 0), company_text, font=company_font)
@@ -459,18 +1076,20 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
             (center_x - (company_width // 2), info_y),
             company_text,
             font=company_font,
-            fill=_hex_to_rgb("#1B1B1B"),
+            fill=(255, 255, 255),
         )
         info_y += (company_bbox[3] - company_bbox[1]) + 10
 
     if position_text:
         position_bbox = draw.textbbox((0, 0), position_text, font=position_font)
         position_width = position_bbox[2] - position_bbox[0]
+        pos_accent = theme_info.get("text_accent", (195, 170, 240))
+        pos_fill = _lerp_color(pos_accent, (160, 145, 185), 0.45)
         draw.text(
             (center_x - (position_width // 2), info_y),
             position_text,
             font=position_font,
-            fill=_hex_to_rgb("#3A3A37"),
+            fill=pos_fill,
         )
         info_y += (position_bbox[3] - position_bbox[1]) + 8
 
@@ -481,9 +1100,10 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
             (center_x - (secondary_width // 2), info_y + 4),
             secondary_text,
             font=secondary_font,
-            fill=_hex_to_rgb("#5C5C58"),
+            fill=(160, 140, 200),
         )
 
+    # ── Role bar ──────────────────────────────────────────────────────────────
     role_bar_height = 112
     role_bar_left = card_left
     role_bar_right = card_right - edge_width
@@ -492,7 +1112,6 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     draw.rectangle(
         (role_bar_left, role_bar_top, role_bar_right, role_bar_bottom),
         fill=_hex_to_rgb(role_style["bar_fill"]),
-        width=2,
     )
     if role_id == "speaker":
         draw.rectangle(
@@ -513,8 +1132,22 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
         fill=_hex_to_rgb(role_style["bar_text"]),
     )
 
+    # ── Logo on white panel (brand-compliance: full-colour logo on white) ─────
+    logo_area_top = role_bar_bottom
+    logo_area_bottom = card_bottom
+    logo_panel_padding_h = 36
+    logo_panel_padding_v = 20
     logo_x = center_x - (logo.width // 2)
-    logo_y = role_bar_bottom + (card_bottom - role_bar_bottom -logo.height) // 2
+    logo_y = logo_area_top + (logo_area_bottom - logo_area_top - logo.height) // 2
+    draw.rectangle(
+        (
+            logo_x - logo_panel_padding_h,
+            logo_y - logo_panel_padding_v,
+            logo_x + logo.width + logo_panel_padding_h,
+            logo_y + logo.height + logo_panel_padding_v,
+        ),
+        fill=(255, 255, 255),
+    )
     canvas.paste(logo, (logo_x, logo_y), logo)
 
     output = io.BytesIO()
@@ -650,15 +1283,32 @@ def _build_sample_participant(role_id: str) -> Dict[str, str]:
     return SAMPLE_PARTICIPANTS.get(role_id, SAMPLE_PARTICIPANTS["client"]).copy()
 
 
-def _build_background_prompt() -> str:
-    return (
+def _build_background_prompt(
+    theme_info: Optional[Dict[str, Any]] = None,
+    visual_keywords: str = "",
+) -> str:
+    """Build the image-generation prompt.
+
+    The base is always a dark purple abstract background.  Theme-specific mood
+    words and AI-extracted brief keywords are appended so the generated texture
+    reinforces the conference's character.
+    """
+    base = (
         "Abstract background only, portrait orientation, single flat background layer. "
         "Premium corporate-tech aesthetic, minimalist, elegant, restrained. "
-        "Palette limited to charcoal, near-black, white, and soft gray with a very subtle purple accent. "
-        "Sharp geometric accents, crisp edges, controlled contrast, soft depth only if needed. "
+        "Deep rich purple and violet tones, dramatic color depth, dark atmosphere. "
+        "Sharp geometric accents, crisp edges, controlled contrast, soft atmospheric depth. "
         "Large clean negative space and high readability for future text overlay. "
         "Fully abstract composition, atmospheric but understated, no focal object, no framing device."
     )
+    modifiers: List[str] = []
+    if theme_info and theme_info.get("prompt_hint"):
+        modifiers.append(theme_info["prompt_hint"])
+    if visual_keywords:
+        modifiers.append(visual_keywords)
+    if modifiers:
+        return base + " " + ", ".join(modifiers) + "."
+    return base
 
 
 def _build_negative_prompt() -> str:
@@ -667,6 +1317,44 @@ def _build_negative_prompt() -> str:
         "fake ui, document layout, poster layout, presentation slide layout, ghost text, translucent overlay, "
         "duplicate layer, badge frame, placeholder blocks, lower thirds, tables, cards, templates, document chrome"
     )
+
+
+def _scan_brief_for_visual_keywords(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> str:
+    """AI agent that reads the conference brief and returns visual atmosphere
+    descriptors to enrich the background image-generation prompt.
+
+    Returns a comma-separated string of descriptors (empty on failure so the
+    rest of the pipeline is never blocked).
+    """
+    brief_summary = {
+        "conference_name": _first_non_empty(
+            brief.get("product_or_service"), document_brief.get("title")
+        ),
+        "scope": _safe_text(brief.get("scope_of_work")),
+        "target_audience": _safe_text(brief.get("target_audience")),
+        "key_messages": _safe_text(brief.get("key_messages")),
+        "client_expectations": _safe_text(brief.get("client_expectations")),
+        "description": _safe_text(document_brief.get("description")),
+        "target_group": _safe_text(document_brief.get("target_group")),
+    }
+
+    prompt = (
+        "Jesteś art directorem specjalizującym się w brandingu konferencji. "
+        "Na podstawie poniższego briefu konferencji wyodrębnij 5–8 zwięzłych deskryptorów wizualnej atmosfery "
+        "do abstrakcyjnego obrazu tła. Skup się na nastroju, poziomie energii i metaforach "
+        "odzwierciedlających temat konferencji. "
+        "Unikaj generycznych słów takich jak 'fioletowy', 'gradient' czy 'abstrakcyjny'. "
+        "Zwróć WYŁĄCZNIE listę deskryptorów oddzielonych przecinkami, w języku angielskim "
+        "(model generowania obrazów działa najlepiej z angielskimi opisami) — bez wyjaśnień, bez numeracji.\n\n"
+        f"Brief konferencji:\n{json.dumps(brief_summary, ensure_ascii=False, indent=2)}"
+    )
+
+    try:
+        result = extract_structured_text(prompt)
+        cleaned = result.strip().strip('"').strip("'")
+        return cleaned if cleaned else ""
+    except Exception:
+        return ""
 
 
 def _build_badge_layout_data(
@@ -713,6 +1401,21 @@ def _build_badge_layout_data(
     }
 
 
+def _tone_label(tone: float) -> str:
+    """Return a human-readable Polish description of the tone score (post-cap value)."""
+    if tone < 0.15:
+        return "Bardzo korporacyjny \u2014 zimna, statyczna paleta"
+    if tone < 0.30:
+        return "Korporacyjny \u2014 stonowane, zimne odcienie"
+    if tone < 0.45:
+        return "Zr\u00f3wnowa\u017cony \u2014 umiarkowany charakter"
+    if tone < 0.60:
+        return "Dynamiczny \u2014 cieplejsze akcenty"
+    if tone < 0.78:
+        return "Swobodny \u2014 \u017cywe, ciep\u0142e barwy"
+    return "Bardzo swobodny \u2014 intensywne, gor\u0105ce kolory"
+
+
 def _build_badge_spec(
     role_config: Dict[str, str],
     conference_name: str,
@@ -720,9 +1423,13 @@ def _build_badge_spec(
     badge_id: Optional[str] = None,
     badge_name: Optional[str] = None,
     asset_slug: Optional[str] = None,
+    theme_info: Optional[Dict[str, Any]] = None,
+    visual_keywords: str = "",
 ) -> Dict[str, Any]:
+    resolved_theme = theme_info or _apply_tone_to_theme(CONFERENCE_THEMES["general"], 0.30)
     sample_participant = participant_data or _build_sample_participant(role_config["id"])
     attendee_name = _build_attendee_name(sample_participant)
+    tone_value = resolved_theme.get("tone", 0.20)
     return {
         "id": badge_id or f"badge-{role_config['id']}",
         "role_id": role_config["id"],
@@ -735,8 +1442,11 @@ def _build_badge_spec(
         "sample_participant": sample_participant,
         "headline": _truncate(conference_name, 96),
         "supporting_copy": _truncate(attendee_name or role_config["label"], 96),
-        "backgroundPrompt": _build_background_prompt(),
+        "backgroundPrompt": _build_background_prompt(resolved_theme, visual_keywords),
         "negativePrompt": _build_negative_prompt(),
+        "themeInfo": resolved_theme,
+        "tone_score": round(tone_value, 2),
+        "tone_label": _tone_label(tone_value),
         "badgeLayoutData": _build_badge_layout_data(
             conference_name=conference_name,
             role_config=role_config,
@@ -754,6 +1464,13 @@ def build_badge_generation_plan(
     image_format: str = "png",
 ) -> Dict[str, Any]:
     conference_name = _first_non_empty(brief.get("product_or_service"), document_brief.get("title"), fallback="Accenture Conference")
+
+    # ── Detect theme + tone, then flatten to a single resolved palette ────────
+    theme_info = _detect_conference_theme(brief, document_brief)
+    tone = _detect_tone(brief, document_brief)
+    theme_info = _apply_tone_to_theme(theme_info, tone)
+    visual_keywords = _scan_brief_for_visual_keywords(brief, document_brief)
+
     role_variants = _extract_role_variants(
         brief.get("scope_of_work"),
         brief.get("target_audience"),
@@ -781,6 +1498,8 @@ def build_badge_generation_plan(
                     badge_id=f"badge-{role['id']}-{index:03d}",
                     badge_name=f"Badge / {attendee_name}",
                     asset_slug=f"{index:03d}-{attendee_name}-{role['id']}",
+                    theme_info=theme_info,
+                    visual_keywords=visual_keywords,
                 )
             )
     else:
@@ -789,6 +1508,8 @@ def build_badge_generation_plan(
                 _build_badge_spec(
                     role_config=role,
                     conference_name=conference_name,
+                    theme_info=theme_info,
+                    visual_keywords=visual_keywords,
                 )
             )
 
@@ -809,6 +1530,9 @@ def build_badge_generation_plan(
             "participant_types": sorted({badge["participant_type"] for badge in badges}),
             "brandbook_source": BRAND_GUIDELINES["source_document"],
             "official_logo_applied": True,
+            "theme_id": theme_info.get("theme_id", "general"),
+            "theme_style": theme_info.get("style", "innovative"),
+            "tone_score": round(theme_info.get("tone", 0.30), 2),
         },
         "badges": badges,
     }

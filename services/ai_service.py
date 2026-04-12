@@ -157,6 +157,37 @@ def _generate_flux_image_bytes(prompt: str, size: str = "1024x1024", negative_pr
     return _extract_bytes_from_image_response(response_payload)
 
 
+def get_embedding_client():
+    """Return an AzureOpenAI client for embeddings.
+
+    Prefers AZURE_EMBEDDING_ENDPOINT / AZURE_EMBEDDING_API_KEY if set so
+    organisations that host embeddings on a separate Azure resource can
+    configure it independently.  Falls back to the LLM credentials.
+    """
+    endpoint = os.getenv("AZURE_EMBEDDING_ENDPOINT") or os.getenv("AZURE_LLM_ENDPOINT")
+    api_key = os.getenv("AZURE_EMBEDDING_API_KEY") or os.getenv("AZURE_LLM_API_KEY")
+    api_version = os.getenv("AZURE_LLM_API_VERSION")
+    if not endpoint or not api_key or not api_version:
+        raise ValueError(
+            "Missing embedding credentials. Set AZURE_EMBEDDING_ENDPOINT (or AZURE_LLM_ENDPOINT), "
+            "AZURE_EMBEDDING_API_KEY (or AZURE_LLM_API_KEY), and AZURE_LLM_API_VERSION."
+        )
+    return AzureOpenAI(azure_endpoint=endpoint, api_key=api_key, api_version=api_version)
+
+
+def get_embedding(text: str) -> list:
+    """Return the embedding vector for *text* using the configured Azure deployment.
+
+    Set AZURE_EMBEDDING_DEPLOYMENT to the name of your embedding deployment
+    (e.g. ``text-embedding-3-large``).  Falls back to ``text-embedding-3-large``
+    if the variable is absent.
+    """
+    client = get_embedding_client()
+    deployment = os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-large")
+    response = client.embeddings.create(model=deployment, input=text)
+    return response.data[0].embedding
+
+
 def strip_code_fences(text: str) -> str:
     """Remove markdown code fences (```json ... ``` or ``` ... ```) from an LLM response."""
     cleaned = text.strip()
