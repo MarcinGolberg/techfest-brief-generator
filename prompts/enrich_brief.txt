@@ -1,28 +1,117 @@
-You are transforming a structured marketing brief into a polished document brief.
+You are transforming a structured marketing brief into a polished, decision-ready document brief for internal creative and production teams.
 
-Return ONLY valid JSON with these fields:
-- title
-- executive_summary
-- background
-- objective
-- target_group
-- issue
-- insight
-- creative_challenge
-- mandatories
-- graphic_asset_type
-- branding_guidance
-- key_points
-- sources_summary
+Return ONLY valid JSON.
+Do not wrap the response in markdown.
+Do not add explanations before or after the JSON.
 
-Rules:
-- Use Polish.
-- Use only the provided input.
-- Do not invent unsupported facts.
-- If something is missing, keep it concise and neutral.
-- "mandatories", "branding_guidance", and "key_points" must always be arrays of strings.
-- "executive_summary" should be short and useful for quick reading.
-- "sources_summary" should briefly describe what sources were used.
+Required JSON fields:
+- title: string
+- executive_summary: string
+- background: string
+- objective: string
+- target_group: string
+- issue: string
+- insight: string
+- creative_challenge: string
+- mandatories: string[]
+- graphic_asset_type: string
+- branding_guidance: string[]
+- key_points: string[]
+- sources_summary: string
+
+Goal:
+Turn the input into a concise but useful brief that is clearer, more structured, and more actionable than the raw source material, while staying faithful to the provided data.
+
+Core rules:
+1. Use Polish.
+2. Use only the provided input: brief_json, sources_json, and combined_text.
+3. Do not invent facts, numbers, dates, audiences, claims, or brand rules that are not supported by the input.
+4. If information is missing, ambiguous, or weak, keep the output neutral, concise, and non-speculative.
+5. Prefer clear business language over vague marketing clichés.
+6. Write in a polished brief style: concrete, readable, and useful for design/marketing teams.
+7. Remove duplication and merge overlapping ideas into cleaner wording.
+8. Preserve the meaning of the source input, but improve wording, structure, and clarity.
+9. Never output null. Use an empty string "" for missing single-value fields and [] for missing list fields.
+10. "mandatories", "branding_guidance", and "key_points" must always be arrays of strings.
+
+Field guidance:
+
+title
+- Create a short professional title for the brief.
+- Prefer the product, campaign, deliverable, or event name if clearly available.
+- Do not make the title overly creative.
+
+executive_summary
+- 2–4 concise sentences.
+- Summarize what is being prepared, for whom, and what the main communication goal is.
+- Make it useful for someone who wants to understand the brief quickly.
+
+background
+- Explain the context of the project or request.
+- Include only relevant context from the input.
+- Avoid padding and generic filler.
+
+objective
+- State the main communication or business objective as clearly as possible.
+- If the input contains multiple goals, combine them into one coherent paragraph.
+- Prefer measurable goals when explicitly provided.
+
+target_group
+- Describe the intended audience in a clear and practical way.
+- If the input gives broad or fragmented audience descriptions, consolidate them into one coherent target group description.
+
+issue
+- Describe the core problem, tension, or business need that justifies the work.
+- If the problem is not explicitly stated, infer only minimally from the provided input and keep it conservative.
+
+insight
+- Capture the most useful communication, audience, or market insight from the input.
+- This should feel like a strategic takeaway, not just a repetition of the issue.
+- If no real insight is present, keep it brief and neutral.
+
+creative_challenge
+- Rewrite the task as a practical creative challenge for a designer/creative team.
+- It should explain what the communication must achieve and under what constraints.
+- Make it specific, not generic.
+
+mandatories
+- List only required or explicitly expected elements, constraints, deliverables, or conditions.
+- Each item should be a short standalone string.
+- Include required formats, must-have content, mandatory placements, required consistency, explicit restrictions, deadlines only if clearly provided, etc.
+
+graphic_asset_type
+- Describe the type of graphic/material being requested.
+- Keep it short and specific, e.g. "identyfikator konferencyjny", "landing page", "prezentacja sprzedażowa", "grafika do social media".
+- If unclear, use the closest supported description from the input.
+
+branding_guidance
+- List branding, tone-of-voice, visual, layout, logo, color, typography, or consistency requirements explicitly supported by the input.
+- Each item should be a short standalone string.
+- Do not invent brand rules.
+
+key_points
+- Extract the most important messages, priorities, or takeaways the final material should communicate.
+- These should be practical and useful to the creative team.
+- Avoid duplicate wording.
+- Prefer 3–7 items when possible, but do not force it.
+
+sources_summary
+- Briefly describe what source material was used.
+- Mention whether the answer was based on brief_json, sources_json, combined_text, or a combination of them.
+- Keep it short and factual.
+
+Quality requirements:
+- Be more descriptive than the raw input, but not verbose.
+- Make each field useful for downstream work by strategy, design, or production teams.
+- Avoid generic empty phrases like "ważne jest, aby przekaz był skuteczny" unless the source truly gives nothing better.
+- Prefer specificity over elegance.
+- Prefer concrete nouns and actions over abstract jargon.
+- Keep wording professional and compact.
+
+Output contract:
+- Return exactly one JSON object.
+- All required fields must be present.
+- The output must be valid JSON.
 
 Input brief:
 {{brief_json}}
