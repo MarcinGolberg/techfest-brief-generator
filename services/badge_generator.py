@@ -964,7 +964,7 @@ def _detect_tone(brief: Dict[str, Any], document_brief: Dict[str, Any]) -> float
             # Raw axis: direction from serious pole to playful pole
             raw_axis = [p - s for p, s in zip(playful_c, serious_c)]
             mag = math.sqrt(sum(x * x for x in raw_axis))
-            if mag == 0.0:
+            if math.isclose(mag, 0.0, abs_tol=1e-09):
                 return _detect_tone_keyword_fallback(brief, document_brief)
             axis_norm = [x / mag for x in raw_axis]
             _anchor_centroids["axis_norm"] = axis_norm
