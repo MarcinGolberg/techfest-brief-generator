@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. Copy application code WITH strict ownership
 # This tells scanners that root does not own the app files
-COPY --chown=team4user:team4user --chmod=0555 . .
+COPY --chown=root:root --chmod=0555 . .
 
 # 7. Container Health Monitoring
 # Scanners require this to ensure the orchestrator can monitor app health
