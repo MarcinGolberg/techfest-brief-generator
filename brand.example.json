@@ -1,0 +1,22 @@
+{
+  "primary_color": "#4A4AFF",
+  "base_colors": [
+    "#1B1B1B",
+    "#FFFFFF"
+  ],
+  "supporting_colors": [
+    "#707070",
+    "#F2F2F2"
+  ],
+  "typography": "clean sans-serif",
+  "geometry": "sharp corners, 0px radius",
+  "motif": ">",
+  "style": "professional, minimalist, premium, corporate-tech",
+  "logo_rule": "use only the supplied logo asset, unmodified, unrotated, full opacity",
+  "logo_placement": "place the full logo in one of the layout corners, with generous clear space",
+  "logo_color_rule": "do not alter the colour of the logo or the motif",
+  "full_color_logo_background_rule": "use the full-colour logo on a white background for clarity",
+  "co_branding_rule": "do not create new logos or blend marks",
+  "source_document": "brand.example.json",
+  "host_organisation": ""
+}

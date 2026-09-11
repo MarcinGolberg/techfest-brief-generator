@@ -45,6 +45,17 @@ header.scrolled::after { transform: scaleX(1); }
   width: auto;
 }
 
+/* Stands in for the brand logo, which is not redistributed with this repo.
+   Point BADGE_LOGO_LIGHT / BADGE_LOGO_DARK at your own assets to restore it. */
+.logo-wordmark {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 24px;
+  color: inherit;
+}
+
 nav { display: flex; gap: 32px; align-items: center; }
 
 nav a {

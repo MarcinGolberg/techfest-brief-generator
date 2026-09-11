@@ -91,7 +91,7 @@ function renderDocumentPreview(docBrief, docxDownloadUrl) {
           <span class="badge-status-pill waiting">oczekuje</span>
         </div>
         <p class="badge-workflow-copy">
-          Po akceptacji uruchomię generowanie wariantów badge'y zgodnych z brandbookiem Accenture
+          Po akceptacji uruchomię generowanie wariantów badge'y zgodnych z konfiguracją marki
           i pokażę gotowe pliki oraz statusy renderowania.
         </p>
         <div class="badge-upload-box">

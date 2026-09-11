@@ -17,5 +17,22 @@ uploads/*
 generated/*
 !generated/.gitkeep
 
+# Allowlist, not a denylist: only the scripts and the synthetic fixture belong in
+# the repo. Real correspondence, participant lists and parser output do not, and a
+# suffix denylist would still admit tests/PRIVATE.EML or tests/nested/private.eml.
 tests/*
-tests
+!tests/__init__.py
+!tests/test_parser.py
+!tests/test_generate_brief.py
+!tests/przyklad-brief.eml
+# A pattern without a trailing slash matches directories too, so the four
+# negations above would re-admit a directory that happens to share one of those
+# names. This closes that case.
+tests/*/
+# Image tarballs: a built image can carry baked-in build args and full layer history.
+*.tar
+
+# Brand assets and config are not redistributed with this repo. See README.
+brand.json
+images/logo-*.png
+services/fonts/*.ttf

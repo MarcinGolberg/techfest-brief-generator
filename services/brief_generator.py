@@ -28,17 +28,33 @@ def _safe_list(value: Any) -> List[str]:
     return []
 
 
+# Briefs are written in Polish. reportlab's built-in Helvetica has no glyphs for
+# ą ć ę ł ń ó ś ź ż in its standard encoding, so falling back to it silently
+# mangles the output. DejaVu covers them and ships with the image; the Dockerfile
+# installs fonts-dejavu-core for exactly this reason.
+DEJAVU_FALLBACKS = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+)
+
+
 @lru_cache(maxsize=1)
 def _get_pdf_font_names() -> tuple[str, str]:
-    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
-    regular_path = os.path.join(fonts_dir, "Graphik-Regular.ttf")
-    bold_path = os.path.join(fonts_dir, "Graphik-Bold.ttf")
+    # The brand typeface is licensed and is not in the repo. Supply your own via
+    # BADGE_FONT_DIR and the PDF embeds it.
+    fonts_dir = os.getenv("BADGE_FONT_DIR", os.path.join(os.path.dirname(__file__), "fonts"))
+    regular_path = os.path.join(fonts_dir, os.getenv("BADGE_FONT_REGULAR", "Regular.ttf"))
+    bold_path = os.path.join(fonts_dir, os.getenv("BADGE_FONT_BOLD", "Bold.ttf"))
 
     if not (os.path.exists(regular_path) and os.path.exists(bold_path)):
+        regular_path, bold_path = DEJAVU_FALLBACKS
+
+    if not (os.path.exists(regular_path) and os.path.exists(bold_path)):
+        # Last resort. Latin-only: expect missing glyphs in Polish text.
         return "Helvetica", "Helvetica-Bold"
 
-    regular_name = "Graphik-Regular-Embedded"
-    bold_name = "Graphik-Bold-Embedded"
+    regular_name = "Brief-Regular-Embedded"
+    bold_name = "Brief-Bold-Embedded"
 
     registered_fonts = set(pdfmetrics.getRegisteredFontNames())
     if regular_name not in registered_fonts:
@@ -129,6 +145,9 @@ def generate_document_brief_pdf(document_brief: Dict[str, Any], output_dir: str 
         fontName=bold_font,
         fontSize=20,
         leading=24,
+        # ponytail: neutral default, not read from BRAND_CONFIG_PATH. Wiring it up
+        # means importing badge_generator (and its AI client chain) for one colour.
+        # Move the brand loader to its own module if the PDF ever needs to follow brand.json.
         textColor=HexColor("#4A4AFF"),
         alignment=TA_LEFT,
         spaceAfter=16

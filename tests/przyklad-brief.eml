@@ -1,0 +1,57 @@
+From: "Kowalska, Anna" <a.kowalska@example.com>
+To: "Nowak, Piotr" <p.nowak@example.com>, "Wisniewski,
+ Jakub" <j.wisniewski@example.com>
+Subject: =?windows-1250?q?Brief_-_wiosenna_kampania_ksi=EAgarni?=
+Date: Thu, 26 Mar 2026 16:46:44 +0000
+Message-ID: <fixture-0001@example.com>
+Content-Language: pl-PL
+X-MS-Has-Attach: yes
+Content-Type: multipart/related;
+	boundary="_012_przyklad_brief_related_";
+	type="multipart/alternative"
+MIME-Version: 1.0
+
+--_012_przyklad_brief_related_
+Content-Type: multipart/alternative;
+	boundary="_000_przyklad_brief_alt_"
+
+--_000_przyklad_brief_alt_
+Content-Type: text/plain; charset="windows-1250"
+Content-Transfer-Encoding: quoted-printable
+
+Cze=9C=E6, zbieram za=B3o=BFenia do wiosennej kampanii ksi=EAgarni Modrzew.
+
+Chcemy =9Cci=B9gn=B9=E6 do sklepu wi=EAcej student=F3w, wi=EAc akcja ma rus=
+zy=E6 w po=B3owie marca
+i trwa=E6 sze=9C=E6 tygodni. Bud=BFet mediowy to oko=B3o dwunastu tysi=EAcy=
+ z=B3otych.
+
+Ton swobodny, bez korporacyjnego =BFargonu. G=B3=F3wny kana=B3 to Instagram=
+, do tego
+plakaty A3 w akademikach. Has=B3o robocze: "Czytaj taniej, my=9Cl dro=BFej".
+
+Miar=B9 sukcesu jest liczba nowych kart lojalno=9Cciowych za=B3o=BFonych do=
+ ko=F1ca kwietnia.
+
+Pozdrawiam,
+Anna
+
+--_000_przyklad_brief_alt_
+Content-Type: text/html; charset="windows-1250"
+Content-Transfer-Encoding: quoted-printable
+
+<html><body><p>Wersja HTML tej samej wiadomo=9Cci. Parser ma wybra=E6 text/=
+plain i pomin=B9=E6 ten cz=B3on.</p></body></html>
+
+--_000_przyklad_brief_alt_--
+
+--_012_przyklad_brief_related_
+Content-Type: image/png; name="sygnatura.png"
+Content-Transfer-Encoding: base64
+Content-ID: <sygnatura@example.com>
+Content-Disposition: inline; filename="sygnatura.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8A
+AAAASUVORK5CYII=
+
+--_012_przyklad_brief_related_--

@@ -1,6 +1,43 @@
-# Accenture TechFest 3.0 — Team 4
+# Accenture TechFest 3.0: Team 4
 
-AI-powered marketing brief generator and conference badge creator, built for the Accenture TechFest 3.0 hackathon.
+AI-powered marketing brief generator and conference badge creator, built for the Accenture TechFest 3.0 hackathon on 11 and 12 April 2026. Almost all of the history lands on those two days: 51 commits on the 11th, 31 on the 12th.
+
+## Team
+
+Three of us built it. Roughly who did what:
+
+| | |
+|---|---|
+| [@BiedrzyckiCoding](https://github.com/BiedrzyckiCoding) | Flask application and the LLM service layer, the chat agent, in-place brief editing, confidence scoring and embedding-based tone detection. Set up the first CI workflow with Gitleaks, Bandit, Safety, CycloneDX SBOM and SonarQube, and ran the branch and pull-request process |
+| [@NtiXX](https://github.com/NtiXX) | Badge generation end to end: layout, fonts and the rendered output, plus PDF and Word export of the brief itself. Built the file upload path and the brief pipeline, wrote the extraction and enrichment prompts, and did layout work on the brief panel |
+| [@MarcinGolberg](https://github.com/MarcinGolberg) | CI/CD and deployment: took the pipeline from scaffolding to passing, fixed the SonarQube gate and cleared the findings the scanners raised. Added Trivy as a blocking gate, ACR build and push, and the container deploy on Azure App Service, on a hardened non-root Dockerfile |
+
+The split above is a summary and several files were touched by more than one of us, so `git log` is the authority.
+
+## Brand assets are not in this repo
+
+The hackathon ran against a client brandbook. We cannot redistribute the logo files, the brandbook
+notes or the licensed Graphik typeface, so they are gone and the code runs without them. Out of the
+box you get a neutral placeholder brand, a wordmark where the logo used to sit, and DejaVu in place
+of the licensed face. Badges will not come out pixel-identical to what the jury saw.
+
+To run it with your own brand:
+
+```
+BRAND_CONFIG_PATH=./brand.json     # copy brand.example.json and edit; brand.json is gitignored
+BADGE_LOGO_LIGHT=./images/logo-light.png
+BADGE_LOGO_DARK=./images/logo-dark.png
+BADGE_FONT_DIR=./services/fonts    # expects Regular.ttf and Bold.ttf
+```
+
+All of these are optional. Nothing crashes when they are missing: the logo becomes a transparent
+block, the font falls back to DejaVu, and the brand config falls back to the defaults in
+`badge_generator.DEFAULT_BRAND_GUIDELINES`.
+
+One caveat on fonts. Briefs and badges are in Polish, and neither Pillow's built-in font nor
+reportlab's default Helvetica has glyphs for `ą ć ę ł ń ó ś ź ż`. They come out as boxes, or vanish.
+DejaVu has them, which is why the Dockerfile installs `fonts-dejavu-core` and both generators look
+there before giving up. If you supply your own typeface, check it covers Polish diacritics.
 
 ---
 
@@ -42,10 +79,13 @@ python app.py
 
 ```bash
 docker build -t team4-app .
-docker run -p 5000:5000 --env-file .env team4-app
+docker run -p 8080:8080 --env-file .env team4-app
 ```
 
 ### Deployed image
+
+These were the hackathon's resources in April 2026. They are recorded here for reference and
+are not expected to still be running.
 
 ```
 acrtf3team04.azurecr.io/team4-app:latest
@@ -102,7 +142,7 @@ User input (text / files)
 | 3 | The chat overlay opens | `missing_info_detector.py` checks each field for empty, generic, or ambiguous values and returns a prioritised list |
 | 4 | Answers Maja's questions one by one | `chat_agent.py` evaluates each answer (accepted / needs\_more / invalid); on acceptance the field is written into the brief and the sidebar + panel update live |
 | 5 | After two consecutive nonsense answers | A manual input card appears so the user can type directly without the AI validation loop |
-| 6 | All 10 fields filled | The chat switches to **edit mode**: the user can type natural-language commands like *"Change the target audience to women 25–40"* |
+| 6 | All 10 fields filled | The chat switches to edit mode: the user can type natural-language commands like *"Change the target audience to women 25–40"* |
 | 7 | Clicks **Generate document** | `document_brief_builder.py` enriches the brief with the `enrich_brief.txt` prompt; the result is rendered as a document preview in the right panel |
 | 8 | Downloads DOCX or PDF | `brief_generator.py` writes the document via `python-docx` or `reportlab` and serves it |
 | 9 | Clicks **Accept brief** | `badge_generator.py` generates one badge per participant role (or per row in an uploaded `.xlsx`); each badge uses a PIL-drawn layout with an AI-generated background |
@@ -121,11 +161,9 @@ The application has four prompts. Two live in the `prompts/` directory as plain 
 | 3 | Brief enrichment | `prompts/enrich_brief.txt` | File read + three `{{…}}` substitutions |
 | 4 | Brief editing | `services/brief_editor.py` → `EDIT_SYSTEM_PROMPT` | Inline Python constant |
 
-### 1. Brief extraction — `prompts/extract_brief.txt`
+### 1. Brief extraction: `prompts/extract_brief.txt`
 
-**When:** immediately after the user submits their input (step 2 above).
-
-**What it does:** The prompt instructs the model to act as a structured information extraction system. It receives the full `combined_text` (all uploaded files and typed text merged) and must return a single valid JSON object with exactly 10 fields:
+Runs immediately after the user submits their input, step 2 above. The prompt tells the model to behave as a structured extraction system: it gets the full `combined_text`, meaning every uploaded file and the typed text merged together, and has to return one valid JSON object with exactly 10 fields.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -140,21 +178,19 @@ The application has four prompts. Two live in the `prompts/` directory as plain 
 | `scope_of_work` | string | What deliverables are in scope |
 | `client_expectations` | string | Client constraints and preferences |
 
-**Key rules embedded in the prompt:**
-- Extract **only** what is explicitly stated — no inference or guessing.
+The prompt's main rules:
+- Extract **only** what is explicitly stated; no inference or guessing.
 - Missing fields return `""` (strings) or `[]` (lists), never invented values.
 - Language follows the input: Polish input → Polish output.
 - Normalise content: remove duplicates, condense to concise phrases.
 
-**How the response is used:** `brief_pipeline.py` calls `strip_code_fences()` to remove any markdown wrappers, then `json.loads()` to parse the result. The parsed dict goes straight into `detect_missing_fields()`.
+What happens to the response: `brief_pipeline.py` calls `strip_code_fences()` to remove any markdown wrappers, then `json.loads()` to parse the result. The parsed dict goes straight into `detect_missing_fields()`.
 
 ---
 
-### 2. Answer validation — `SYSTEM_PROMPT` in `services/chat_agent.py`
+### 2. Answer validation: `SYSTEM_PROMPT` in `services/chat_agent.py`
 
-**When:** every time the user sends a message during the Q&A filling phase (step 4).
-
-**What it does:** The model plays the role of **Maja**, a senior marketing consultant. She evaluates the user's latest answer in the context of the specific brief field being filled and classifies it as one of three statuses:
+Runs on every message the user sends during the Q&A filling phase, step 4. The model plays Maja, a senior marketing consultant, who reads the latest answer against whichever brief field is currently being filled and sorts it into one of three statuses.
 
 | Status | Meaning | Action |
 |--------|---------|--------|
@@ -162,7 +198,7 @@ The application has four prompts. Two live in the `prompts/` directory as plain 
 | `needs_more` | Answer is understandable but too vague | Maja asks a follow-up; `invalidStreak` resets to 0 |
 | `invalid` | Answer is nonsense / random characters | Maja signals confusion; `invalidStreak` increments. After 2 consecutive invalids the manual input card appears |
 
-**How the context is structured:** `chat_agent.py` assembles a single user-turn message containing:
+How the context is assembled: `chat_agent.py` assembles a single user-turn message containing:
 - The current field label and type (string vs list)
 - The original question for this field
 - The current values of `product_or_service` and `target_audience` from the brief (so Maja has context)
@@ -170,15 +206,13 @@ The application has four prompts. Two live in the `prompts/` directory as plain 
 
 The model is told to return **only valid JSON** (`response_format={"type": "json_object"}`), with exactly three keys: `status`, `brief_value`, and `response` (a warm Polish message shown to the user).
 
-**Why per-field conversation history:** Each field resets `fieldConversation` to `[]` when a new question starts. This keeps the context window short and prevents the model from being confused by answers to previous fields.
+Why the history is per field: Each field resets `fieldConversation` to `[]` when a new question starts. This keeps the context window short and prevents the model from being confused by answers to previous fields.
 
 ---
 
-### 3. Brief enrichment — `prompts/enrich_brief.txt`
+### 3. Brief enrichment: `prompts/enrich_brief.txt`
 
-**When:** when the user clicks **Generate document** (step 7).
-
-**What it does:** The prompt takes the completed 10-field brief JSON, the list of original sources, and the full `combined_text`, and asks the model to transform them into an **extended document-ready JSON** with 13 fields suitable for a professional marketing brief document:
+Runs when the user clicks Generate document, step 7. The prompt hands the model three things, the completed 10-field brief JSON, the list of original sources and the full `combined_text`, and asks for them back as a longer 13-field JSON that a brief document can be built from.
 
 | Field | Contents |
 |-------|---------|
@@ -196,23 +230,21 @@ The model is told to return **only valid JSON** (`response_format={"type": "json
 | `key_points` | Most important take-aways (list) |
 | `sources_summary` | Description of all input sources used |
 
-**Key rules embedded in the prompt:**
+The prompt's main rules:
 - Use Polish throughout.
-- Use only provided input — do not invent unsupported facts.
+- Use only provided input; do not invent unsupported facts.
 - `mandatories`, `branding_guidance`, and `key_points` must always be arrays.
 - If a value is missing keep it concise and neutral rather than fabricating.
 
-**How the response is used:** `document_brief_builder.py` strips code fences and parses the JSON. The result is stored as `currentDocumentBrief` in the browser and rendered in the right panel. It is also passed to `brief_generator.py` to produce the DOCX/PDF file.
+What happens to the response: `document_brief_builder.py` strips code fences and parses the JSON. The result is stored as `currentDocumentBrief` in the browser and rendered in the right panel. It is also passed to `brief_generator.py` to produce the DOCX/PDF file.
 
 ---
 
-### 4. Brief editing — `EDIT_SYSTEM_PROMPT` in `services/brief_editor.py`
+### 4. Brief editing: `EDIT_SYSTEM_PROMPT` in `services/brief_editor.py`
 
-**When:** the user types a natural-language edit command during edit mode (step 6), e.g. *"Change the target audience to women aged 25–40"*.
+Runs when the user types a natural-language edit command in edit mode, step 6, for example *"Change the target audience to women aged 25–40"*. The model gets the full current brief JSON along with the instruction, and returns only the fields that actually change, plus a short confirmation message in Polish.
 
-**What it does:** The model receives the full current brief JSON and the user's edit instruction, and returns only the fields that need to change, plus a short Polish confirmation message.
-
-**Response format:**
+Response format:
 ```json
 {
   "updated_fields": {
@@ -228,7 +260,7 @@ The server merges only the returned fields back into the brief, re-runs `detect_
 
 ## Badge theming and tone detection
 
-Every generated badge adapts its visual character to the conference brief through a two-stage pipeline: **conference theme detection** followed by **tone scoring**, which together produce a single resolved palette used for gradient rendering.
+Badges take their look from the brief rather than from a fixed template. Two steps decide it. First the conference theme is matched, then the tone is scored, and the pair of results picks the palette the gradient is drawn with.
 
 ### Conference theme detection
 
@@ -240,30 +272,30 @@ Every generated badge adapts its visual character to the conference brief throug
 | `finance_formal` | Finance, banking, compliance | equity, audit, treasury, regulatory |
 | `healthcare` | Medical, pharma, life science | clinical, biotech, genomics, patient |
 | `marketing_creative` | Brand, advertising, media | campaign, storytelling, content, agency |
-| `general` | Default fallback | — |
+| `general` | Default fallback | none |
 
-### Tone detection — embedding axis projection
+### Tone detection: embedding axis projection
 
-`_detect_tone()` returns a continuous score **0.0 (very corporate) → 1.0 (very playful)** using semantic embedding projection:
+`_detect_tone()` returns a continuous score from 0.0, very corporate, to 1.0, very playful. It gets there by projecting embeddings rather than comparing them directly:
 
 1. Two sets of short, extreme anchor phrases define the poles of the tone axis (seriousness and playfulness).
 2. The centroid of each set is computed once per process and cached.
-3. A unit vector is derived from `playfulness_centroid − seriousness_centroid` — this is the **tone axis**.
+3. A unit vector is derived from `playfulness_centroid − seriousness_centroid`. That vector is the tone axis.
 4. The brief embedding is projected onto this axis.
 5. The projection is calibrated using the anchor centroids as reference points (0 = serious pole, 1 = playful pole).
 
-This is more discriminative than comparing independent cosine similarities because it measures movement along the specific tone dimension rather than overall proximity to either pole in the full high-dimensional space.
+Comparing two independent cosine similarities would work less well here. It would measure how close the brief sits to either pole across the whole space, whereas the projection only measures movement along the one dimension we care about.
 
-**Inputs for tone detection:**
+What feeds the tone score:
 
 | Source | Fields used | Why |
 |--------|-------------|-----|
-| Raw brief | `tone_of_voice`, `client_expectations`, `target_audience`, `campaign_goal` | Direct user declarations of character — highest signal quality; LLM enrichment tends to normalise these into neutral prose |
+| Raw brief | `tone_of_voice`, `client_expectations`, `target_audience`, `campaign_goal` | Direct user declarations of character, highest signal quality; LLM enrichment tends to normalise these into neutral prose |
 | Document brief | `title`, `executive_summary`, `target_group`, `insight`, `creative_challenge`, `key_points` | Industry and context signals |
 
-**Keyword fallback:** when the embedding service is unavailable, a weighted keyword count over the same fields is used. Polish-language tone words are included explicitly (e.g. `elegancki/stonowany` → corporate; `zabawowy/energiczny/krzykliwy` → playful).
+Keyword fallback. when the embedding service is unavailable, a weighted keyword count over the same fields is used. Polish-language tone words are included explicitly (e.g. `elegancki/stonowany` → corporate; `zabawowy/energiczny/krzykliwy` → playful).
 
-**`tone_cap`:** some domains are structurally formal. Finance is hard-capped at 0.35 and healthcare at 0.70, regardless of the detected score.
+The `tone_cap`. some domains are structurally formal. Finance is hard-capped at 0.35 and healthcare at 0.70, regardless of the detected score.
 
 ### Warm / cold colour axis
 
@@ -271,8 +303,8 @@ The tone score drives a lerp between two palette variants per theme. The colour 
 
 | Tone | Direction | Visual character |
 |------|-----------|-----------------|
-| 0.0 — corporate | **Cold** — near-black with steel/navy undertones | Single barely-visible blob, no streaks, static |
-| 1.0 — playful | **Warm** — oranges, ambers, hot pinks, reds | 5 large vivid blobs, high opacity, diagonal light streaks |
+| 0.0 corporate | Cold: near-black with steel/navy undertones | Single barely-visible blob, no streaks, static |
+| 1.0 playful | Warm: oranges, ambers, hot pinks, reds | 5 large vivid blobs, high opacity, diagonal light streaks |
 
 | Theme | Corporate palette | Playful palette |
 |-------|-------------------|-----------------|
@@ -317,10 +349,10 @@ Ton i charakter badga: Korporacyjny — stonowane, zimne odcienie (0.12)
 | 2 | Accept input in multiple formats | ✅ | `file_parser.py` handles typed text, email text, PDF, DOCX, PPTX, EML, XLSX |
 | 3 | Identify and fill missing information | ✅ | `missing_info_detector.py` + chat Q&A loop with AI validation |
 | 4 | Generate standardised final brief | ✅ | 10-field JSON brief; exported as DOCX or PDF with professional layout |
-| 5 | Generate conference badge | ✅ | `badge_generator.py`: 5 role variants, PNG/JPG output, Accenture branding |
+| 5 | Generate conference badge | ✅ | `badge_generator.py`: 5 role variants, PNG/JPG output, brand config driven |
 | 6 | Coherent user flow | ✅ | Guided overlay: sidebar progress, live brief panel, smooth transitions |
 
-### Functionality 1 — Brief generation
+### Functionality 1: Brief generation
 
 | # | Requirement | Status | Implementation |
 |---|------------|--------|----------------|
@@ -330,13 +362,13 @@ Ton i charakter badga: Korporacyjny — stonowane, zimne odcienie (0.12)
 | 4 | Identify missing information | ✅ | `missing_info_detector.py` flags empty, generic (`"n/a"`, `"brak"`) and ambiguous (`"wszyscy"`, `"internet"`) values |
 | 5 | Human-in-the-loop verification | ✅ | AI chat agent "Maja" validates each answer; falls back to manual input card after 2 consecutive invalid answers |
 
-### Functionality 2 — Badge generation
+### Functionality 2: Badge generation
 
 | # | Requirement | Status | Implementation |
 |---|------------|--------|----------------|
 | 1 | Generate badge from brief | ✅ | `start_badge_generation()` reads conference name, branding, and participant data from the brief |
-| 2 | Accenture brandbook compliance | ✅ | `BRAND_GUIDELINES` constant encodes colour palette (`#4A4AFF`, `#000000`, `#FFFFFF`), sharp-corner geometry, logo placement rules, and source document reference |
-| 3 | Multiple variants for different participant types | ✅ | 5 role variants: `guest`, `client`, `partner`, `organizer`, `speaker` — each with its own accent colour and visual cue |
+| 2 | Brandbook compliance | ✅ | `BRAND_GUIDELINES` encodes colour palette, sharp-corner geometry, logo placement rules and a source-document reference; loaded from `BRAND_CONFIG_PATH`, with neutral defaults in-repo |
+| 3 | Multiple variants for different participant types | ✅ | 5 role variants: `guest`, `client`, `partner`, `organizer`, `speaker`, each with its own accent colour and visual cue |
 | 4 | Output as JPG or PNG | ✅ | PIL renders the final image; format is configurable (`png` default, `jpg` supported) |
 | 5 | Use image generation model | ✅ | `generate_image_bytes()` calls either FLUX via BFL API or Azure OpenAI Images to generate a branded background per badge |
 | 6 | Conference-aware visual theming | ✅ | `badge_generator.py` detects domain (tech / finance / healthcare / marketing) and scores tone via embedding axis projection; gradient palette lerps between cold-corporate and warm-playful poles |
@@ -358,9 +390,9 @@ Ton i charakter badga: Korporacyjny — stonowane, zimne odcienie (0.12)
 | 1 | Code in GitHub repository | ✅ | `TechFestOrg/team4` |
 | 2 | Responsible AI / guardrails | ✅ | Maja's system prompt explicitly scopes her role to marketing brief validation; `invalid` status rejects nonsense inputs; `GENERIC_VALUES` and `AMBIGUOUS_VALUES` sets block low-quality data from entering the brief |
 | 3 | No sensitive data in repo | ✅ | All credentials loaded from environment variables / Azure Key Vault; `.env` not committed |
-| 4 | Automatic vulnerability scan | ✅ | CI/CD pipeline runs **Bandit** (static Python analysis) + **Safety** (dependency CVEs) + **Trivy** (container image scan); pipeline fails on HIGH/CRITICAL findings; reports uploaded as artifacts |
-| 5 | SBOM in CycloneDX format | ✅ | `cyclonedx-bom` generates `sbom.json` on every pipeline run; artifact uploaded to GitHub Actions and sent to **DependencyTrack** via API |
-| 6 | Quality Gate (fail-fast) | ✅ | **SonarQube** scan runs on every push; pipeline fails if security rating drops below A, bugs > 0, duplicated lines > 5%, or hotspots unreviewed |
+| 4 | Automatic vulnerability scan | ✅ | CI/CD pipeline runs Bandit (static Python analysis) + Safety (dependency CVEs) + Trivy (container image scan); pipeline fails on HIGH/CRITICAL findings; reports uploaded as artifacts |
+| 5 | SBOM in CycloneDX format | ✅ | `cyclonedx-bom` generates `sbom.json` on every pipeline run; artifact uploaded to GitHub Actions and sent to DependencyTrack via API |
+| 6 | Quality Gate (fail-fast) | ✅ | SonarQube scan runs on every push and reports against a gate set to security rating A, zero bugs, duplicated lines under 5% and reviewed hotspots; the Docker build and deploy job runs only after the scan job succeeds |
 
 ### Optional features implemented
 
@@ -395,8 +427,8 @@ team4/
 ├── static/
 │   ├── css/                      # 10 CSS files (base, header, hero, composer, chat, …)
 │   └── js/                       # 7 JS files (state, utils, chat-ui, chat-flow, brief-panel, composer, main)
-├── images/
-│   └── Accenture-logo.png        # Official logo used in badge generation
+├── images/                       # Brand logos, supplied via BADGE_LOGO_* (not in repo)
+├── brand.example.json            # Template for BRAND_CONFIG_PATH
 ├── generated/                    # Runtime output: briefs, badges (auto-cleaned after 24 h)
 └── .github/workflows/deploy.yml  # DevSecOps CI/CD pipeline
 ```

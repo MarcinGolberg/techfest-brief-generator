@@ -15,24 +15,44 @@ from openpyxl import load_workbook
 
 from services.ai_service import extract_structured_text, generate_image_bytes, get_embedding
 
-BRAND_GUIDELINES = {
+_REPO_ROOT = os.path.dirname(os.path.dirname(__file__))
+
+# The brand this generates for is configuration, not code. The hackathon ran on a
+# client brandbook whose assets are not ours to redistribute, so the repo ships a
+# neutral placeholder and reads the real one from BRAND_CONFIG_PATH (or brand.json,
+# which is gitignored). See README, "Running it with your own brand".
+DEFAULT_BRAND_GUIDELINES = {
     "primary_color": "#4A4AFF",
     "base_colors": ["#1B1B1B", "#FFFFFF"],
     "supporting_colors": ["#707070", "#F2F2F2"],
-    "typography": "Graphik-like clean sans-serif",
+    "typography": "clean sans-serif",
     "geometry": "sharp corners, 0px radius",
     "motif": ">",
     "style": "professional, minimalist, premium, corporate-tech",
-    "logo_rule": "use only the official Accenture logo asset, unmodified, unrotated, full opacity",
+    "logo_rule": "use only the supplied logo asset, unmodified, unrotated, full opacity",
     "logo_placement": "place the full logo in one of the layout corners, with generous clear space",
-    "logo_color_rule": "do not alter the color of the logo or greater-than symbol",
-    "full_color_logo_background_rule": "use the full-color logo on a white background for clarity",
+    "logo_color_rule": "do not alter the colour of the logo or the motif",
+    "full_color_logo_background_rule": "use the full-colour logo on a white background for clarity",
     "co_branding_rule": "do not create new logos or blend marks",
     "source_document": "brand.example.json",
+    # Name of the organisation hosting the event. Used to classify its own people
+    # as staff. Empty by default so no organisation is hardcoded.
+    "host_organisation": "",
 }
 
-LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo-white.png")
-LOGO_PATH_DARK = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "Accenture-logo.png")
+
+def _load_brand_guidelines() -> Dict[str, Any]:
+    path = os.getenv("BRAND_CONFIG_PATH") or os.path.join(_REPO_ROOT, "brand.json")
+    if not os.path.exists(path):
+        return dict(DEFAULT_BRAND_GUIDELINES)
+    with open(path, encoding="utf-8") as fh:
+        return {**DEFAULT_BRAND_GUIDELINES, **json.load(fh)}
+
+
+BRAND_GUIDELINES = _load_brand_guidelines()
+
+LOGO_PATH = os.getenv("BADGE_LOGO_LIGHT", os.path.join(_REPO_ROOT, "images", "logo-light.png"))
+LOGO_PATH_DARK = os.getenv("BADGE_LOGO_DARK", os.path.join(_REPO_ROOT, "images", "logo-dark.png"))
 BADGE_SIZE = (900, 1200)
 SAFE_MARGIN = 56
 ROLE_STRIP_WIDTH = 42
@@ -63,9 +83,9 @@ ROLE_VARIANTS = [
     {
         "id": "organizer",
         "label": "Organizator",
-        "keywords": ["organizator", "organizatorzy", "organizer", "staff", "zespół accenture"],
-        "visual_cue": "szeroki pasek w kolorze Accenture Purple i mocny pionowy akcent",
-        "accent_color": "#4A4AFF",
+        "keywords": ["organizator", "organizatorzy", "organizer", "staff", "zespół organizacyjny"],
+        "visual_cue": "szeroki pasek w kolorze wiodącym marki i mocny pionowy akcent",
+        "accent_color": BRAND_GUIDELINES["primary_color"],
     },
     {
         "id": "speaker",
@@ -98,13 +118,13 @@ SAMPLE_PARTICIPANTS = {
     "organizer": {
         "first_name": "Karolina",
         "last_name": "Mazur",
-        "company": "Accenture",
+        "company": "Example Sp. z o.o.",
         "position": "Event Lead",
     },
     "speaker": {
         "first_name": "Piotr",
         "last_name": "Kamiński",
-        "company": "Accenture",
+        "company": "Example Sp. z o.o.",
         "position": "AI Strategy Lead",
     },
 }
@@ -316,7 +336,7 @@ CONFERENCE_THEMES = {
         "theme_id": "general",
         "tone_cap": 1.0,
         "keywords": [],
-        # Near-black with a hint of Accenture purple. Completely monochrome.
+        # Near-black with a hint of the brand's primary hue. Completely monochrome.
         "corporate": {
             "style": "formal",
             "dynamism": 0.06,
@@ -425,23 +445,36 @@ def _hex_to_rgb(value: str) -> tuple[int, int, int]:
     return ImageColor.getrgb(value)
 
 
+SYSTEM_FONT_FALLBACKS = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+)
+
+
 def _load_font(size: int, bold: bool = False):
-    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
-    font_filename = "Graphik-Bold.ttf" if bold else "Graphik-Medium.ttf"
-    font_path = os.path.join(fonts_dir, font_filename)
+    """Load the configured badge font, degrading rather than failing.
 
-    if not os.path.exists(font_path):
-        raise RuntimeError(f"Missing font file: {font_path}")
+    The brand typeface is licensed and is not in the repo, so the lookup order is
+    BADGE_FONT_DIR, then a system DejaVu, then Pillow's built-in. Metrics differ
+    between them, so a badge rendered on the fallback will not be pixel-identical
+    to one rendered with the licensed face.
+    """
+    fonts_dir = os.getenv("BADGE_FONT_DIR", os.path.join(os.path.dirname(__file__), "fonts"))
+    default_name = "Bold.ttf" if bold else "Regular.ttf"
+    font_name = os.getenv("BADGE_FONT_BOLD" if bold else "BADGE_FONT_REGULAR", default_name)
 
-    return ImageFont.truetype(font_path, size=size)
+    for candidate in (os.path.join(fonts_dir, font_name), SYSTEM_FONT_FALLBACKS[bold]):
+        if os.path.exists(candidate):
+            return ImageFont.truetype(candidate, size=size)
+
+    return ImageFont.load_default(size=size)
 
 
 def _fit_logo(max_width: int, max_height: int, path: str = LOGO_PATH) -> Image.Image:
     if not os.path.exists(path):
-        raise ValueError(
-            f"Nie znaleziono pliku logo Accenture pod ścieżką {path}. "
-            "Przywróć plik logo do katalogu team4/images."
-        )
+        # No logo configured. A transparent block of the requested size keeps the
+        # caller's centring maths intact and renders the badge without a mark.
+        return Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))
     logo = Image.open(path).convert("RGBA")
     return ImageOps.contain(logo, (max_width, max_height))
 
@@ -527,13 +560,14 @@ def _draw_centered_lines(
 
 
 def _role_bar_style(role_id: str) -> Dict[str, str]:
+    primary = BRAND_GUIDELINES["primary_color"]
     styles = {
         "organizer": {
-            "bar_fill": "#4A4AFF",
+            "bar_fill": primary,
             "bar_text": "#FFFFFF",
-            "bar_border": "#4A4AFF",
-            "bar_accent": "#4A4AFF",
-            "edge": "#4A4AFF",
+            "bar_border": primary,
+            "bar_accent": primary,
+            "edge": primary,
         },
         "client": {
             "bar_fill": "#1B1B1B",
@@ -553,8 +587,8 @@ def _role_bar_style(role_id: str) -> Dict[str, str]:
             "bar_fill": "#FFFFFF",
             "bar_text": "#1B1B1B",
             "bar_border": "#D9D9D9",
-            "bar_accent": "#4A4AFF",
-            "edge": "#4A4AFF",
+            "bar_accent": primary,
+            "edge": primary,
         },
         "guest": {
             "bar_fill": "#224BFF",
@@ -676,10 +710,10 @@ def _adaptive_palette(luminance: float) -> dict:
 
 
 def _adapt_logo_for_background(luminance: float, max_width: int, max_height: int) -> Image.Image:
-    """Load the correct Accenture logo variant based on background luminance.
+    """Pick the logo variant that stays legible on the sampled background.
 
-    luminance > 0.45 (bright background) → Accenture-logo.png        (full-colour / dark)
-    luminance ≤ 0.45 (dark  background)  → Accenture-logo-white.png  (white variant)
+    luminance > 0.45 (bright background) → BADGE_LOGO_DARK   (full-colour / dark)
+    luminance <= 0.45 (dark background)  → BADGE_LOGO_LIGHT  (white variant)
     """
     path = LOGO_PATH_DARK if luminance > 0.45 else LOGO_PATH
     return _fit_logo(max_width, max_height, path)
@@ -1082,7 +1116,7 @@ def _compose_badge_image(badge: Dict[str, Any], image_bytes: bytes) -> bytes:
     in at very low opacity as an organic texture layer so the keyword-enriched
     prompt still influences the final look without overwhelming the gradient.
     All foreground text is rendered in white/light-lavender tones for contrast.
-    The Accenture logo sits on a white panel at the bottom (brand-compliance
+    The logo sits on a white panel at the bottom (brand-compliance
     rule: full-colour logo must appear on white).
     """
     theme_info = badge.get("themeInfo") or CONFERENCE_THEMES["general"]
@@ -1312,7 +1346,10 @@ def _resolve_role_variant(*texts: str, fallback_id: str = "guest") -> Dict[str, 
     for role in ROLE_VARIANTS:
         if any(keyword in combined for keyword in role["keywords"]):
             return role
-    if "accenture" in combined:
+    # Anyone from the host organisation is staff unless something more specific
+    # matched above. The name is configuration, so this is inert until set.
+    host = _safe_text(BRAND_GUIDELINES.get("host_organisation")).lower()
+    if host and host != "-" and host in combined:
         return ROLE_VARIANT_BY_ID["organizer"]
     return ROLE_VARIANT_BY_ID[fallback_id]
 
@@ -1670,7 +1707,7 @@ def build_badge_generation_plan(
     sources: Optional[List[Dict[str, Any]]] = None,
     image_format: str = "png",
 ) -> Dict[str, Any]:
-    conference_name = _first_non_empty(brief.get("product_or_service"), document_brief.get("title"), fallback="Accenture Conference")
+    conference_name = _first_non_empty(brief.get("product_or_service"), document_brief.get("title"), fallback="Conference")
 
     # ── Detect theme + tone, extract industry colours, then resolve palette ──
     theme_info = _detect_conference_theme(brief, document_brief)
@@ -1729,7 +1766,7 @@ def build_badge_generation_plan(
         "requested_format": image_format,
         "brandbook": BRAND_GUIDELINES,
         "logo_asset_path": LOGO_PATH,
-        "message": "Uruchomiono generowanie graficznych wariantów badge'y zgodnych z briefem i brandbookiem.",
+        "message": "Uruchomiono generowanie graficznych wariantów badge'y zgodnych z briefem i konfiguracją marki.",
         "summary": {
             "conference_name": conference_name,
             "variants_count": len(badges),
@@ -1737,7 +1774,7 @@ def build_badge_generation_plan(
             "generation_mode": "participant_list" if normalized_participants else "role_variants",
             "participant_types": sorted({badge["participant_type"] for badge in badges}),
             "brandbook_source": BRAND_GUIDELINES["source_document"],
-            "official_logo_applied": True,
+            "official_logo_applied": os.path.exists(LOGO_PATH),
             "theme_id": theme_info.get("theme_id", "general"),
             "theme_style": theme_info.get("style", "innovative"),
             "tone_score": round(theme_info.get("tone", 0.30), 2),
@@ -1819,7 +1856,7 @@ def start_badge_generation(
             )
             badge.update(asset)
             badge["status"] = "generated"
-            badge["official_logo_applied"] = True
+            badge["official_logo_applied"] = os.path.exists(LOGO_PATH)
             badge["brandbook_source"] = BRAND_GUIDELINES["source_document"]
             generated_count += 1
         except Exception as exc:

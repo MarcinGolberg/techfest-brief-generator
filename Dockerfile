@@ -7,6 +7,7 @@ RUN useradd -m team4user
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     curl \
+    fonts-dejavu-core \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
